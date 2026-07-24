@@ -7,74 +7,98 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242836;--border:#2e3347;--text:#e4e6ed;--text-muted:#8b90a0;--accent:#6366f1;--accent-hover:#818cf8;--green:#22c55e;--green-bg:#132b1e;--amber:#f59e0b;--amber-bg:#2a2018;--blue:#3b82f6;--blue-bg:#172554;--red:#ef4444;--red-bg:#2a1515;--gray:#6b7280;--gray-bg:#1f212e;--radius:10px;--shadow:0 2px 12px rgba(0,0,0,.35)}
+/* ════════════════════════════════════════════════
+   ROOT & RESET
+   ════════════════════════════════════════════════ */
+:root{--bg:#0b0d14;--surface:#151820;--surface2:#1e2335;--border:#282d45;--text:#e2e4ea;--text-muted:#7a7f99;--accent:#6366f1;--accent-hover:#818cf8;--green:#22c55e;--green-bg:#0f291e;--amber:#f59e0b;--amber-bg:#221d12;--blue:#3b82f6;--blue-bg:#111d35;--red:#ef4444;--red-bg:#221515;--gray:#5a6072;--gray-bg:#181b28;--radius:10px;--shadow:0 2px 16px rgba(0,0,0,.4);--sidebar-w:220px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 input,select,textarea,button{font:inherit;color:inherit}
-a{color:var(--accent);text-decoration:none}
 
-/* LOGIN */
-.login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);padding:20px}
+/* ════════════════════════════════════════════════
+   LOGIN
+   ════════════════════════════════════════════════ */
+.login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .login-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.login-box h1{font-size:22px;text-align:center;margin-bottom:6px}
+.login-box h1{font-size:22px;text-align:center;margin-bottom:4px}
 .login-box h1 span{color:var(--accent)}
-.login-box p{text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:24px}
+.login-box .sub{text-align:center;color:var(--text-muted);font-size:12px;margin-bottom:24px}
 .login-box label{font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px;margin-top:14px}
 .login-box input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;outline:none;transition:.2s}
 .login-box input:focus{border-color:var(--accent)}
 .login-box .login-error{color:var(--red);font-size:13px;text-align:center;margin-top:10px;display:none}
 .login-box .btn{margin-top:20px;width:100%}
 
-.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:14px;transition:.2s;justify-content:center}
+/* ════════════════════════════════════════════════
+   LAYOUT (sidebar + main)
+   ════════════════════════════════════════════════ */
+.app-layout{display:none;min-height:100vh}
+.app-layout.open{display:flex}
+
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
+.sidebar-brand{padding:18px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sidebar-brand span{color:var(--accent)}
+.sidebar-nav{flex:1;padding:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
+.nav-item .icon{font-size:16px;width:22px;text-align:center}
+
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:12px}
+.sidebar-footer .user-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sidebar-footer .user-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-footer .logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;transition:.2s;width:100%}
+.sidebar-footer .logout-btn:hover{border-color:var(--red);color:var(--red)}
+.role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.role-badge.site_admin{background:var(--accent);color:#fff}
+.role-badge.process_admin{background:var(--blue-bg);color:var(--blue)}
+.role-badge.user{background:var(--amber-bg);color:var(--amber)}
+.role-badge.verifier{background:var(--green-bg);color:var(--green)}
+
+.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.header-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+.header-bar h2{font-size:16px;font-weight:600}
+.header-bar h2 .sub{font-size:12px;color:var(--text-muted);font-weight:400}
+
+.page{display:none;padding:20px 28px;flex:1;max-width:1400px;width:100%}
+.page.active{display:block}
+
+/* ════════════════════════════════════════════════
+   COMPONENTS
+   ════════════════════════════════════════════════ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:13px;transition:.2s;justify-content:center}
 .btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent-hover);box-shadow:0 2px 12px rgba(99,102,241,.3)}
+.btn-primary:hover{background:var(--accent-hover);box-shadow:0 2px 10px rgba(99,102,241,.3)}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn-secondary:hover{background:var(--border)}
 .btn-danger{background:var(--red-bg);color:var(--red)}
-.btn-danger:hover{background:#3a1a1a}
+.btn-danger:hover{background:#331a1a}
 .btn-success{background:var(--green-bg);color:var(--green)}
 .btn-sm{padding:6px 14px;font-size:12px}
 .btn-xs{padding:4px 10px;font-size:11px}
 
-.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.app-header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
-.app-header h1 span{color:var(--accent)}
-.header-meta{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-muted)}
-.header-meta .user-role{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
-.header-meta .user-role.admin{background:var(--blue-bg);color:var(--blue)}
-.header-meta .user-role.user{background:var(--amber-bg);color:var(--amber)}
-.header-meta .user-role.verifier{background:var(--green-bg);color:var(--green)}
-.logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;padding:5px 12px;border-radius:6px;font-size:12px;transition:.2s}
-.logout-btn:hover{border-color:var(--red);color:var(--red)}
-
-.tab-bar{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:var(--radius);margin:0 28px;margin-top:16px;flex-wrap:wrap}
-.tab-btn{padding:8px 18px;border-radius:8px;border:none;background:transparent;cursor:pointer;font-weight:500;font-size:13px;color:var(--text-muted);transition:.2s}
-.tab-btn:hover{color:var(--text);background:var(--border)}
-.tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
-
-.page{display:none;padding:20px 28px;flex:1;max-width:1400px;margin:0 auto;width:100%}
-.page.active{display:block}
-
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
-.stat-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
-.stat-card .value{font-size:24px;font-weight:700;margin-top:2px}
-.stat-card .value.green{color:var(--green)}.stat-card .value.amber{color:var(--amber)}.stat-card .value.blue{color:var(--blue)}.stat-card .value.red{color:var(--red)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.stat-card .label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.stat-card .value{font-size:22px;font-weight:700;margin-top:2px}
+.stat-card .value.green{color:var(--green)}.stat-card .value.amber{color:var(--amber)}
+.stat-card .value.blue{color:var(--blue)}.stat-card .value.red{color:var(--red)}
 
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
 .filter-bar input,.filter-bar select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;transition:.2s}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
-.filter-bar input{flex:1;min-width:180px}
-.filter-bar select{cursor:pointer}
+.filter-bar input.search{flex:1;min-width:180px}
 
-.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.cheque-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:6px}
-.cheque-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
-.cheque-card .top-row{display:flex;justify-content:space-between;align-items:flex-start}
-.cheque-card .cheque-no{font-weight:600;font-size:14px}
-.cheque-card .amount{font-weight:700;font-size:15px;color:var(--accent)}
-.cheque-card .customer{font-size:13px;color:var(--text-muted)}
-.cheque-card .meta{display:flex;gap:12px;font-size:12px;color:var(--text-muted);flex-wrap:wrap}
+/* Batch Cards */
+.batch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.batch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:.2s}
+.batch-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.batch-card .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.batch-card .location{font-weight:600;font-size:15px}
+.batch-card .batch-no{font-size:12px;color:var(--text-muted)}
+.batch-card .total-amt{font-weight:700;font-size:17px;color:var(--accent)}
+.batch-card .meta{display:flex;gap:14px;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.batch-card .meta span{display:flex;align-items:center;gap:3px}
 
 .status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .status-badge.pending{background:var(--amber-bg);color:var(--amber)}
@@ -94,76 +118,45 @@ a{color:var(--accent);text-decoration:none}
 
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal-overlay.open{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.modal-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border)}
-.modal-header h2{font-size:16px}
-.modal-close{background:none;border:none;cursor:pointer;font-size:22px;color:var(--text-muted);padding:2px 8px;border-radius:6px;transition:.2s}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:90%;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:15px}
+.modal-close{background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);padding:2px 6px;border-radius:6px;transition:.2s}
 .modal-close:hover{background:var(--surface2);color:var(--text)}
-.modal-body{padding:20px 22px}
-.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.modal-body{padding:18px 20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
 
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-.detail-field .dl{font-size:11px;color:var(--text-muted);margin-bottom:2px}
-.detail-field .dv{font-size:14px;font-weight:500}
-
-.receipt-section{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
-.receipt-section h4{font-size:13px;margin-bottom:8px}
-.receipt-preview{max-width:100%;max-height:200px;border-radius:6px;display:block;margin-bottom:8px;background:#000}
-.receipt-upload-label{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;transition:.2s}
-.receipt-upload-label:hover{border-color:var(--accent)}
-#receiptInput{display:none}
-
-.notes-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;resize:vertical;min-height:60px;outline:none;transition:.2s}
-.notes-textarea:focus{border-color:var(--accent)}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);max-height:500px;overflow-y:auto}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+.table-wrap th{background:var(--surface2);padding:8px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);position:sticky;top:0}
+.table-wrap td{padding:7px 12px;border-bottom:1px solid var(--border)}
 
 .empty-state{text-align:center;padding:60px 20px;color:var(--text-muted)}
 .empty-state .icon{font-size:48px;margin-bottom:10px}
 .empty-state h3{font-size:16px;color:var(--text);margin-bottom:4px}
 
-.toast-container{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:6px}
-.toast{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;box-shadow:var(--shadow);animation:slideIn .3s ease;max-width:340px}
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:6px;max-width:360px}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;box-shadow:var(--shadow);animation:slideIn .3s ease}
 .toast.success{border-left:3px solid var(--green)}.toast.error{border-left:3px solid var(--red)}.toast.info{border-left:3px solid var(--blue)}
 @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 
-.preview-table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;max-height:400px;overflow-y:auto}
-.preview-table-wrap table{width:100%;border-collapse:collapse;font-size:12px}
-.preview-table-wrap th{background:var(--surface2);padding:8px 10px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);position:sticky;top:0}
-.preview-table-wrap td{padding:7px 10px;border-bottom:1px solid var(--border)}
-
-.history-table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
-.history-table-wrap table{width:100%;border-collapse:collapse;font-size:12px}
-.history-table-wrap th{background:var(--surface2);padding:8px 12px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap}
-.history-table-wrap td{padding:7px 12px;border-bottom:1px solid var(--border)}
-
-/* User management */
-.user-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
-.user-table th{background:var(--surface2);padding:10px 14px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border)}
-.user-table td{padding:8px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
-.user-table tr:last-child td{border-bottom:none}
-.add-user-row{background:var(--surface2)}
-
-.import-results{margin-top:12px;padding:12px;border-radius:8px;font-size:13px}
-.import-results.success{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,.2)}
-.import-results.error{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)}
-
 @media(max-width:768px){
-.app-header{padding:12px 16px}
-.tab-bar{margin:0 12px;margin-top:12px;overflow-x:auto}
-.tab-btn{padding:6px 14px;white-space:nowrap;font-size:12px}
+:root{--sidebar-w:0px}
+.sidebar{display:none}
+.main-area{margin-left:0}
 .page{padding:12px 16px}
-.card-grid{grid-template-columns:1fr}
-.detail-grid{grid-template-columns:1fr}
+.batch-grid{grid-template-columns:1fr}
 .stats{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
 <body>
 
-<!-- ============ LOGIN ============ -->
+<!-- ════════════ LOGIN ════════════ -->
 <div class="login-page" id="loginPage">
   <div class="login-box">
     <h1>📋 Cheque <span>Recon</span></h1>
-    <p>TNB CIT Cheque Tracking System</p>
+    <p class="sub">TNB CIT Cheque Tracking</p>
     <form onsubmit="doLogin(event)">
       <label>Username</label>
       <input type="text" id="loginUser" placeholder="Enter username" autocomplete="off" required>
@@ -172,441 +165,685 @@ a{color:var(--accent);text-decoration:none}
       <div class="login-error" id="loginError">Invalid username or password</div>
       <button type="submit" class="btn btn-primary">Sign In</button>
     </form>
-    <p style="margin-top:20px;font-size:11px;color:var(--text-muted)">First time? Login with <strong>admin</strong> / <strong>admin123</strong></p>
   </div>
 </div>
 
-<!-- ============ APP ============ -->
-<div id="appContainer" style="display:none">
-
-<header class="app-header">
-  <h1>📋 Cheque <span>Recon</span></h1>
-  <div class="header-meta">
-    <span id="userDisplay"></span>
-    <span class="user-role" id="roleBadge"></span>
-    <button class="logout-btn" onclick="doLogout()">Sign Out</button>
-  </div>
-</header>
-
-<nav class="tab-bar" id="tabBar">
-  <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
-  <button class="tab-btn" data-tab="import" onclick="switchTab('import')" id="tabImport">📥 Import PDF</button>
-  <button class="tab-btn" data-tab="verify" onclick="switchTab('verify')" id="tabVerify">✅ Verify</button>
-  <button class="tab-btn" data-tab="history" onclick="switchTab('history')">📜 History</button>
-  <button class="tab-btn" data-tab="users" onclick="switchTab('users')" id="tabUsers">👥 Users</button>
-</nav>
-
-<!-- DASHBOARD -->
-<div class="page active" id="page-dashboard">
-  <div class="stats" id="statsBar"></div>
-  <div class="filter-bar">
-    <input type="text" id="searchInput" placeholder="🔍 Search cheque, customer, site..." oninput="renderDashboard()">
-    <select id="statusFilter" onchange="renderDashboard()">
-      <option value="all">All Status</option>
-      <option value="pending">🟠 Pending</option>
-      <option value="in_progress">🔵 In Progress</option>
-      <option value="awaiting_verification">🟢 Awaiting Verification</option>
-      <option value="verified">🔮 Verified</option>
-      <option value="closed">⚫ Closed</option>
-    </select>
-    <select id="locationFilter" onchange="renderDashboard()">
-      <option value="all">All Locations</option>
-    </select>
-    <span class="badge-count" id="resultCount" style="font-size:12px;color:var(--text-muted);margin-left:auto"></span>
-  </div>
-  <div class="card-grid" id="cardGrid"></div>
-</div>
-
-<!-- IMPORT -->
-<div class="page" id="page-import">
-  <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-    <div class="icon">📂</div>
-    <div class="text">Drop your TNB SmartCIT PDF here or click to browse</div>
-    <div class="sub">Supports Bank-In Listing and Rejected Listing PDFs (R045, R046)</div>
-  </div>
-  <input type="file" id="fileInput" accept=".pdf" style="display:none" onchange="handlePDFUpload(event)">
-  
-  <div id="importProgress" style="display:none">
-    <div style="background:var(--surface2);border-radius:6px;height:6px;overflow:hidden;margin:12px 0">
-      <div id="importProgressFill" style="height:100%;background:var(--accent);width:0%;border-radius:6px;transition:width .3s"></div>
+<!-- ════════════ APP LAYOUT ════════════ -->
+<div class="app-layout" id="appLayout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">📋 Cheque <span>Recon</span></div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <span>👤</span>
+        <span class="name" id="sideUserName"></span>
+        <span class="role-badge" id="sideRoleBadge"></span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
     </div>
-    <p id="importStatus" style="font-size:13px;color:var(--text-muted);text-align:center">Processing PDF...</p>
-  </div>
+  </aside>
 
-  <div id="importContent" style="display:none">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-      <h3 style="font-size:15px" id="importSummary">0 entries found</h3>
-      <button class="btn btn-primary btn-sm" onclick="confirmImport()">✅ Import to Dashboard</button>
-      <button class="btn btn-secondary btn-sm" onclick="clearImport()">Cancel</button>
+  <!-- MAIN -->
+  <div class="main-area">
+    <header class="header-bar" id="headerBar">
+      <h2 id="pageTitle">Dashboard</h2>
+    </header>
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats" id="statsBar"></div>
+      <div class="filter-bar">
+        <input type="text" class="search" id="searchInput" placeholder="🔍 Search cheque, customer, location..." oninput="renderDashboard()">
+        <select id="statusFilter" onchange="renderDashboard()">
+          <option value="all">All Status</option>
+          <option value="pending">🟠 Pending</option><option value="in_progress">🔵 In Progress</option>
+          <option value="awaiting_verification">🟢 Awaiting Verify</option><option value="verified">🔮 Verified</option><option value="closed">⚫ Closed</option>
+        </select>
+        <select id="branchFilter" onchange="renderDashboard()"><option value="all">All Branches</option></select>
+        <select id="locFilter2" onchange="renderDashboard()"><option value="all">All Locations</option></select>
+      </div>
+      <div class="batch-grid" id="batchGrid"></div>
     </div>
-    <div class="preview-table-wrap" id="previewWrap"></div>
-    <div id="importResults"></div>
+
+    <!-- IMPORT -->
+    <div class="page" id="page-import">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📂</div>
+        <div class="text">Drop your TNB SmartCIT PDF here</div>
+        <div class="sub">Bank-In Listing (R045) or Rejected Listing (R046)</div>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf" style="display:none" onchange="handlePDFUpload(event)">
+      <div id="importProgress" style="display:none">
+        <div style="background:var(--surface2);border-radius:6px;height:6px;overflow:hidden;margin:12px 0">
+          <div id="importProgressFill" style="height:100%;background:var(--accent);width:0%;border-radius:6px;transition:width .3s"></div>
+        </div>
+        <p id="importStatus" style="font-size:13px;color:var(--text-muted);text-align:center">Processing PDF...</p>
+      </div>
+      <div id="importContent" style="display:none">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+          <h3 style="font-size:14px" id="importSummary"></h3>
+          <button class="btn btn-primary btn-sm" onclick="confirmImport()">✅ Import to Dashboard</button>
+          <button class="btn btn-secondary btn-sm" onclick="clearImport()">Cancel</button>
+        </div>
+        <div class="table-wrap" id="previewWrap"></div>
+        <div id="importResults"></div>
+      </div>
+    </div>
+
+    <!-- BATCHES (for drivers) -->
+    <div class="page" id="page-batches">
+      <div class="filter-bar">
+        <input type="text" class="search" placeholder="🔍 Search batch, location..." id="batchSearch" oninput="renderBatches()">
+        <select id="batchStatusFilter" onchange="renderBatches()">
+          <option value="all">All Status</option>
+          <option value="pending">🟠 Pending</option><option value="in_progress">🔵 In Progress</option>
+          <option value="awaiting_verification">🟢 Awaiting Verify</option>
+        </select>
+      </div>
+      <div class="batch-grid" id="batchGrid2"></div>
+    </div>
+
+    <!-- VERIFY -->
+    <div class="page" id="page-verify">
+      <div class="batch-grid" id="verifyGrid"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="page" id="page-history">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <h2 style="font-size:15px">📜 Completed Batches</h2>
+        <button class="btn btn-secondary btn-sm" onclick="exportHistory()">📤 Export</button>
+      </div>
+      <div class="table-wrap" id="historyWrap"></div>
+    </div>
+
+    <!-- USERS -->
+    <div class="page" id="page-users">
+      <div class="table-wrap" id="usersTableWrap"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div style="max-width:600px">
+        <h3 style="font-size:15px;margin-bottom:12px">🏢 Branch Configuration</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Map terminal codes to branch names. Drivers will filter by branch.</p>
+        <div id="branchConfig"></div>
+        <button class="btn btn-primary btn-sm" onclick="saveBranchConfig()" style="margin-top:10px">💾 Save Branch Config</button>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- VERIFY -->
-<div class="page" id="page-verify">
-  <h2 style="font-size:16px;margin-bottom:14px">✅ Verification Queue</h2>
-  <div id="verifyGrid" class="card-grid"></div>
-</div>
-
-<!-- HISTORY -->
-<div class="page" id="page-history">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-    <h2 style="font-size:16px">📜 Closed & Verified</h2>
-    <button class="btn btn-secondary btn-sm" onclick="exportHistory()">📤 Export</button>
-  </div>
-  <div class="history-table-wrap" id="historyWrap"></div>
-</div>
-
-<!-- USERS -->
-<div class="page" id="page-users">
-  <h2 style="font-size:16px;margin-bottom:14px">👥 Manage Users</h2>
-  <div style="margin-bottom:14px">
-    <button class="btn btn-primary btn-sm" onclick="showAddUser()">+ Add User</button>
-  </div>
-  <div id="usersTableWrap"></div>
-</div>
-
-</div>
-
-<!-- ============ MODAL ============ -->
-<div class="modal-overlay" id="detailModal">
+<!-- ════════════ MODAL ════════════ -->
+<div class="modal-overlay" id="batchModal">
   <div class="modal">
     <div class="modal-header">
-      <h2 id="modalTitle">Cheque Details</h2>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <h2 id="modalTitle">Batch Details</h2>
+      <button class="modal-close" onclick="closeBatchModal()">✕</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
-    <div class="modal-footer" id="modalFooter">
-      <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-    </div>
+    <div class="modal-footer" id="modalFooter"></div>
   </div>
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-/* ============================================================
-   STATE
-   ============================================================ */
-const STATUS_LABELS = {pending:'Pending',in_progress:'In Progress',awaiting_verification:'Awaiting Verification',verified:'Verified',closed:'Closed'};
-const STATUS_ORDER = ['pending','in_progress','awaiting_verification','verified','closed'];
-const ROLE_ADMIN = 'process_admin', ROLE_USER = 'user', ROLE_VERIFIER = 'verifier';
+/* ════════════════════════════════════════════════════════════
+   MODULE 1 — DATA LAYER
+   ════════════════════════════════════════════════════════════ */
+const MODULE = '1.0';
+const STATUS = {pending:'Pending',in_progress:'In Progress',awaiting_verification:'Awaiting Verification',verified:'Verified',closed:'Closed'};
+const ROLE = {SITE_ADMIN:'site_admin',PROCESS_ADMIN:'process_admin',USER:'user',VERIFIER:'verifier'};
+const ROLE_LABELS = {site_admin:'Site Admin',process_admin:'Process Admin',user:'User',verifier:'Verifier'};
 
-let CURRENT_USER = null;
-let DB = {users:[], cheques:[], nextUserId:1};
+// App state
+let CURRENT_USER = null;           // logged-in user object
+let DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, nextUserId:1};
 
-function esc(s){if(typeof s!=='string')return s||'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function genId(){return Date.now().toString(36)+Math.random().toString(36).substr(2,8)}
-function toast(msg,type='info'){const c=document.getElementById('toastContainer');const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),400)},3500)}
-function formatDate(d){if(!d)return'—';const dt=new Date(d);return isNaN(dt)?d:dt.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'})}
-function formatCurrency(n){const v=parseFloat(n);return isNaN(v)?'—':'RM '+v.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2})}
-
-/* ============================================================
-   DB / PERSISTENCE
-   ============================================================ */
+// ─── Persistence ──────────────────────────────────────────
 function loadDB(){
   try{
     const raw = localStorage.getItem('chequeReconDB');
     if(raw){DB = JSON.parse(raw); return true}
   }catch(e){}
-  // First run — seed admin user
-  DB = {users:[], cheques:[], nextUserId:1};
-  DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',roles:[ROLE_ADMIN,ROLE_VERIFIER],createdAt:new Date().toISOString()});
-  DB.nextUserId = 2;
+  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, nextUserId:1};
+  DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:[ROLE.SITE_ADMIN],createdAt:new Date().toISOString()});
+  DB.nextUserId=2;
   saveDB();
   return false;
 }
 function saveDB(){localStorage.setItem('chequeReconDB',JSON.stringify(DB))}
-function getUser(username){
-  return DB.users.find(u=>u.username.toLowerCase()===username.toLowerCase());
-}
-function authenticate(username,password){
-  const u=getUser(username);
-  if(!u||u.password!==password)return null;
-  return u;
+
+function getUser(username){return DB.users.find(u=>u.username.toLowerCase()===username.toLowerCase())}
+function authenticate(u,p){const x=getUser(u);return(x&&x.password===p)?x:null}
+
+// ─── Helpers ──────────────────────────────────────────────
+function esc(s){if(typeof s!=='string')return s||'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).substr(2,8)}
+function toast(m,t='info'){const c=document.getElementById('toastContainer');const e=document.createElement('div');e.className='toast '+t;e.textContent=m;c.appendChild(e);setTimeout(()=>{e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>e.remove(),400)},3500)}
+function fd(d){if(!d)return'—';const dt=new Date(d);return isNaN(dt)?d:dt.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'})}
+function fc(n){const v=parseFloat(n);return isNaN(v)?'—':'RM '+v.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function hasRole(r){return CURRENT_USER&&CURRENT_USER.roles.includes(r)}
+function getBranch(terminal){return DB.branchMap[terminal]||'Unassigned'}
+
+// ─── Compute batch status from individual cheques ─────────
+function batchStatus(cheques){
+  if(cheques.every(c=>c.status==='closed'||c.status==='verified')) return 'closed';
+  if(cheques.every(c=>c.status==='awaiting_verification'||c.status==='verified'||c.status==='closed')) return 'awaiting_verification';
+  if(cheques.some(c=>c.status==='in_progress')) return 'in_progress';
+  return 'pending';
 }
 
-/* ============================================================
-   LOGIN / LOGOUT
-   ============================================================ */
+// ─── Get all batches (grouped by terminal + batch) ────────
+function getAllBatches(){
+  const groups = {};
+  DB.cheques.forEach(c=>{
+    const key = c.terminal + '|' + c.batch;
+    if(!groups[key]) groups[key] = {key,terminal:c.terminal,batch:c.batch,branch:getBranch(c.terminal),cheques:[]};
+    groups[key].cheques.push(c);
+  });
+  return Object.values(groups).map(g=>{
+    g.count = g.cheques.length;
+    g.total = g.cheques.reduce((s,c)=>s+(c.amount||0),0);
+    g.status = batchStatus(g.cheques);
+    g.receiptKey = g.terminal+'_'+g.batch;
+    g.hasReceipt = !!DB.batchReceipts[g.receiptKey];
+    return g;
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 2 — AUTH / SESSION
+   ════════════════════════════════════════════════════════════ */
 function doLogin(e){
   e.preventDefault();
-  const username = document.getElementById('loginUser').value.trim();
-  const password = document.getElementById('loginPass').value;
-  const user = authenticate(username,password);
-  if(!user){
-    document.getElementById('loginError').style.display='block';
-    return;
-  }
+  const u=document.getElementById('loginUser').value.trim(), p=document.getElementById('loginPass').value;
+  const user=authenticate(u,p);
+  if(!user){document.getElementById('loginError').style.display='block';return;}
   document.getElementById('loginError').style.display='none';
-  CURRENT_USER = user;
+  CURRENT_USER=user;
   document.getElementById('loginPage').style.display='none';
-  document.getElementById('appContainer').style.display='flex';
-  document.getElementById('appContainer').style.flexDirection='column';
-  document.getElementById('userDisplay').textContent = user.name || user.username;
-  
-  const roleMap = {process_admin:'Admin',user:'User',verifier:'Verifier'};
-  const badge = document.getElementById('roleBadge');
-  const roles = user.roles.map(r=>roleMap[r]||r).join(', ');
-  badge.textContent = roles;
-  if(user.roles.includes(ROLE_ADMIN))badge.className='user-role admin';
-  else if(user.roles.includes(ROLE_VERIFIER))badge.className='user-role verifier';
-  else badge.className='user-role user';
-  
-  setupTabs();
-  renderDashboard();
+  document.getElementById('appLayout').classList.add('open');
+  buildSidebar();
+  switchPage('dashboard');
 }
+
 function doLogout(){
   CURRENT_USER=null;
-  document.getElementById('appContainer').style.display='none';
+  document.getElementById('appLayout').classList.remove('open');
   document.getElementById('loginPage').style.display='flex';
-  document.getElementById('loginUser').value='';
-  document.getElementById('loginPass').value='';
-}
-function hasRole(role){return CURRENT_USER&&CURRENT_USER.roles.includes(role)}
-
-/* ============================================================
-   TABS
-   ============================================================ */
-function setupTabs(){
-  document.getElementById('tabImport').style.display=hasRole(ROLE_ADMIN)?'inline-block':'none';
-  document.getElementById('tabVerify').style.display=hasRole(ROLE_VERIFIER)?'inline-block':'none';
-  document.getElementById('tabUsers').style.display=hasRole(ROLE_ADMIN)?'inline-block':'none';
-}
-function switchTab(tab){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+tab));
-  if(tab==='dashboard')renderDashboard();
-  if(tab==='verify')renderVerify();
-  if(tab==='history')renderHistory();
-  if(tab==='users')renderUsers();
-  if(tab==='import'){/* on import tab */}
+  document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';
 }
 
-/* ============================================================
-   DASHBOARD
-   ============================================================ */
-function renderDashboard(){
-  const search=(document.getElementById('searchInput').value||'').toLowerCase();
-  const statusF=document.getElementById('statusFilter').value;
-  const locF=document.getElementById('locationFilter').value;
-  
-  let cheques = DB.cheques;
-  
-  // For non-admin users, only show their assigned cheques
-  if(!hasRole(ROLE_ADMIN)){
-    cheques = cheques.filter(c=>c.assignedTo===CURRENT_USER.username||c.locationAssigned===CURRENT_USER.username);
+/* ════════════════════════════════════════════════════════════
+   MODULE 3 — SIDEBAR
+   ════════════════════════════════════════════════════════════ */
+const NAV_ITEMS = [
+  {id:'dashboard',label:'Dashboard',icon:'📊',roles:['*']},
+  {id:'import',label:'Import PDF',icon:'📥',roles:['site_admin','process_admin']},
+  {id:'batches',label:'My Batches',icon:'📋',roles:['site_admin','user']},
+  {id:'verify',label:'Verify',icon:'✅',roles:['site_admin','verifier']},
+  {id:'history',label:'History',icon:'📜',roles:['*']},
+  {id:'users',label:'Users',icon:'👥',roles:['site_admin']},
+  {id:'settings',label:'Settings',icon:'⚙️',roles:['site_admin']},
+];
+
+function buildSidebar(){
+  const nav=document.getElementById('sidebarNav');nav.innerHTML='';
+  NAV_ITEMS.forEach(item=>{
+    if(!item.roles.includes('*')&&!item.roles.some(r=>hasRole(r)))return;
+    const btn=document.createElement('button');btn.className='nav-item';btn.dataset.page=item.id;
+    btn.innerHTML=`<span class="icon">${item.icon}</span>${item.label}`;
+    btn.onclick=()=>switchPage(item.id);
+    nav.appendChild(btn);
+  });
+  const rl=ROLE_LABELS;
+  document.getElementById('sideUserName').textContent=CURRENT_USER.name||CURRENT_USER.username;
+  const rolesText=CURRENT_USER.roles.map(r=>rl[r]||r).join(', ');
+  const badge=document.getElementById('sideRoleBadge');badge.textContent=rolesText;
+  const cls=CURRENT_USER.roles[0]||'user';badge.className='role-badge '+cls;
+}
+
+function switchPage(id){
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const page=document.getElementById('page-'+id);
+  if(page){page.classList.add('active');
+    document.querySelector('.header-bar h2').innerHTML=NAV_ITEMS.find(n=>n.id===id)?.label||id;
   }
-  
-  let filtered = cheques.filter(c=>{
-    if(statusF!=='all'&&c.status!==statusF)return false;
-    if(locF!=='all'&&c.terminal!==locF)return false;
-    if(search){
-      const hay=[c.chequeNo,c.customerName,c.customerSite,c.bank,c.terminal].join(' ').toLowerCase();
-      if(!hay.includes(search))return false;
-    }
+  if(id==='dashboard')renderDashboard();
+  if(id==='batches')renderBatches();
+  if(id==='verify')renderVerify();
+  if(id==='history')renderHistory();
+  if(id==='users')renderUsers();
+  if(id==='settings')renderSettings();
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 4 — DASHBOARD (Batch view)
+   ════════════════════════════════════════════════════════════ */
+function renderDashboard(){
+  let batches=getAllBatches();
+  if(!hasRole(ROLE.SITE_ADMIN)&&!hasRole(ROLE.PROCESS_ADMIN)){
+    // User sees only their assigned batches
+    batches=batches.filter(b=>b.cheques.some(c=>c.assignedTo===CURRENT_USER.username));
+  }
+  const search=(document.getElementById('searchInput').value||'').toLowerCase();
+  const sf=document.getElementById('statusFilter').value;
+  const bf=document.getElementById('branchFilter').value;
+  const lf=document.getElementById('locFilter2').value;
+
+  batches=batches.filter(b=>{
+    if(sf!=='all'&&b.status!==sf)return false;
+    if(bf!=='all'&&b.branch!==bf)return false;
+    if(lf!=='all'&&b.terminal!==lf)return false;
+    if(search&&![b.terminal,b.batch,b.branch].some(x=>x.toLowerCase().includes(search)))return false;
     return true;
   });
-  
+
   // Stats
-  const total=DB.cheques.length;
-  const pend=DB.cheques.filter(c=>c.status==='pending').length;
-  const ip=DB.cheques.filter(c=>c.status==='in_progress').length;
-  const av=DB.cheques.filter(c=>c.status==='awaiting_verification').length;
-  const vf=DB.cheques.filter(c=>c.status==='verified').length;
-  const cl=DB.cheques.filter(c=>c.status==='closed').length;
-  
+  const all=getAllBatches();
   document.getElementById('statsBar').innerHTML=`
-    <div class="stat-card"><div class="label">Total</div><div class="value">${total}</div></div>
-    <div class="stat-card"><div class="label">Pending</div><div class="value amber">${pend}</div></div>
-    <div class="stat-card"><div class="label">In Progress</div><div class="value blue">${ip}</div></div>
-    <div class="stat-card"><div class="label">Awaiting Verify</div><div class="value green">${av}</div></div>
-    <div class="stat-card"><div class="label">Verified</div><div class="value">${vf}</div></div>
-    <div class="stat-card"><div class="label">Closed</div><div class="value">${cl}</div></div>
-  `;
-  
-  // Location filter
-  const locs = [...new Set(DB.cheques.map(c=>c.terminal).filter(Boolean))].sort();
-  const locSel = document.getElementById('locationFilter');
-  const curLoc = locSel.value;
-  locSel.innerHTML = '<option value="all">All Locations</option>' + locs.map(l=>`<option value="${l}">${l}</option>`).join('');
-  locSel.value = curLoc;
-  
-  document.getElementById('resultCount').textContent = filtered.length+' of '+total+' shown';
-  
-  const grid = document.getElementById('cardGrid');
-  if(filtered.length===0){
-    grid.innerHTML = `<div class="empty-state"><div class="icon">📭</div>
-      <h3>No cheques found</h3>
-      <p>${DB.cheques.length===0?'Import a PDF from the Import tab.':'Try adjusting your filters.'}</p></div>`;
-    return;
-  }
-  
-  grid.innerHTML = filtered.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(c=>{
-    const userActions = hasRole(ROLE_USER) || !c.assignedTo;
-    return `<div class="cheque-card" onclick="openModal('${c.id}')">
-      <div class="top-row">
-        <div class="cheque-no">${esc(c.chequeNo||'—')}</div>
-        <div class="amount">${formatCurrency(c.amount)}</div>
+    <div class="stat-card"><div class="label">Total Batches</div><div class="value">${all.length}</div></div>
+    <div class="stat-card"><div class="label">Pending</div><div class="value amber">${all.filter(b=>b.status==='pending').length}</div></div>
+    <div class="stat-card"><div class="label">In Progress</div><div class="value blue">${all.filter(b=>b.status==='in_progress').length}</div></div>
+    <div class="stat-card"><div class="label">Awaiting Verify</div><div class="value green">${all.filter(b=>b.status==='awaiting_verification').length}</div></div>
+    <div class="stat-card"><div class="label">Closed</div><div class="value">${all.filter(b=>b.status==='closed').length}</div></div>`;
+
+  // Populate filters
+  const branches=[...new Set(all.map(b=>b.branch))].sort();
+  const locs=[...new Set(all.map(b=>b.terminal))].sort();
+  const bSel=document.getElementById('branchFilter'),lSel=document.getElementById('locFilter2');
+  const bv=bSel.value, lv=lSel.value;
+  bSel.innerHTML='<option value="all">All Branches</option>'+branches.map(x=>`<option value="${x}">${x}</option>`).join('');
+  lSel.innerHTML='<option value="all">All Locations</option>'+locs.map(x=>`<option value="${x}">${x}</option>`).join('');
+  bSel.value=bv;lSel.value=lv;
+
+  const grid=document.getElementById('batchGrid');
+  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📭</div><h3>No batches found</h3></div>`;return;}
+  grid.innerHTML=batches.sort((a,b)=>new Date(b.cheques[0]?.createdAt)-new Date(a.cheques[0]?.createdAt)).map(b=>`
+    <div class="batch-card" onclick="openBatchModal('${b.key}')">
+      <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)}</div></div>
+        <div class="total-amt">${fc(b.total)}</div></div>
+      <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
+        ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt</span>':''}
       </div>
-      <div class="customer">${esc(c.customerName||'—')} ${c.jobType==='rejected'?'<span style="font-size:10px;color:var(--red)">RETURN</span>':''}</div>
-      <div class="meta">
-        <span>📍 ${esc(c.customerSite||c.terminal||'—')}</span>
-        <span>🏦 ${esc(c.bank||'—')}</span>
-        <span>📅 ${formatDate(c.issueDate)}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
-        <span class="status-badge ${c.status}"><span class="status-dot ${c.status}"></span>${STATUS_LABELS[c.status]||c.status}</span>
-        ${c.receiptFileName?'<span style="font-size:11px;color:var(--text-muted)">📎</span>':''}
-        ${c.rejectReason?'<span style="font-size:10px;color:var(--red)">⚠ '+esc(c.rejectReason.slice(0,25))+'</span>':''}
-      </div>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 5 — BATCH MODAL (checkboxes + proof upload)
+   ════════════════════════════════════════════════════════════ */
+let currentBatchKey = null;
+
+function openBatchModal(key){
+  currentBatchKey = key;
+  const all = getAllBatches();
+  const batch = all.find(b=>b.key===key);
+  if(!batch)return;
+  const isUser = hasRole(ROLE.USER)||hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN);
+  const isVerifier = hasRole(ROLE.VERIFIER)||hasRole(ROLE.SITE_ADMIN);
+  const receiptKey = batch.receiptKey;
+  const receiptData = DB.batchReceipts[receiptKey];
+
+  document.getElementById('modalTitle').textContent = `📋 ${batch.terminal} · Batch ${batch.batch}`;
+
+  const chequeTable = batch.cheques.map((c,i)=>`
+    <tr>
+      ${isUser&&batch.status!=='closed'&&batch.status!=='verified'?
+        `<td><input type="checkbox" class="chk-cheque" data-id="${c.id}" ${c.status!=='pending'?'checked':''}></td>`:''}
+      <td>${i+1}</td>
+      <td>${esc(c.chequeNo||'—')}</td>
+      <td>${fc(c.amount)}</td>
+      <td>${c.jobType==='rejected'?'<span style="color:var(--red)">Return</span>':'Bank-In'}</td>
+      <td><span class="status-badge ${c.status}">${STATUS[c.status]||c.status}</span></td>
+      ${c.rejectReason?`<td style="color:var(--red);font-size:11px">${esc(c.rejectReason.slice(0,30))}</td>`:''}
+    </tr>`).join('');
+
+  let html = `
+    <div style="margin-bottom:12px;font-size:13px">
+      <strong>${batch.count} cheques</strong> · Total ${fc(batch.total)} · Branch: ${esc(batch.branch)}
+    </div>
+    <div class="table-wrap" style="margin-bottom:14px;max-height:300px">
+      <table><thead><tr>
+        ${isUser&&batch.status!=='closed'&&batch.status!=='verified'?'<th style="width:30px"></th>':''}
+        <th>#</th><th>Cheque No</th><th>Amount</th><th>Type</th><th>Status</th>
+        ${batch.cheques.some(c=>c.rejectReason)?'<th>Reason</th>':''}
+      </tr></thead><tbody>${chequeTable}</tbody></table>
     </div>`;
-  }).join('');
+
+  // Receipt section
+  const receiptHtml = receiptData ? `<img class="receipt-preview" src="${receiptData.data}" alt="Receipt" style="max-width:100%;max-height:200px;border-radius:6px;display:block;margin-bottom:8px;background:#000">` : '';
+  html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+    <h4 style="font-size:13px;margin-bottom:8px">📎 Batch Receipt</h4>${receiptHtml}`;
+  
+  if(isUser && batch.status!=='closed' && batch.status!=='verified'){
+    html += `<label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-flex">
+      📁 Upload Receipt for This Batch
+      <input type="file" accept="image/*,.pdf" style="display:none" onchange="uploadBatchReceipt(event,'${receiptKey}')">
+    </label>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${receiptData?'Re-upload to replace':'Upload bank-in slip or return proof for the entire batch'}</div>`;
+  }
+  if(receiptData) html += `<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="removeBatchReceipt('${receiptKey}')">🗑 Remove</button>`;
+  html += `</div>`;
+
+  // Notes
+  html += `<div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Notes (optional)</label>
+    <textarea class="notes-textarea" id="batchNotes" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:50px;outline:none">${batch.cheques[0]?.notes||''}</textarea></div>`;
+
+  document.getElementById('modalBody').innerHTML = html;
+
+  // Footer buttons
+  let footerHtml = `<button class="btn btn-secondary" onclick="closeBatchModal()">Close</button>`;
+  if(isUser && batch.status!=='closed' && batch.status!=='verified'){
+    footerHtml += `<button class="btn btn-primary" onclick="submitBatch('${key}')">✅ Submit Batch</button>`;
+  }
+  if(isVerifier && batch.status==='awaiting_verification'){
+    footerHtml += `<button class="btn btn-success" onclick="verifyBatch('${key}','verified')">✅ Confirm</button>`;
+    footerHtml += `<button class="btn btn-danger" onclick="verifyBatch('${key}','in_progress')">❌ Reject</button>`;
+  }
+  document.getElementById('modalFooter').innerHTML = footerHtml;
+  document.getElementById('batchModal').classList.add('open');
 }
 
-/* ============================================================
-   MODAL
-   ============================================================ */
-let currentModalId = null;
+function closeBatchModal(){document.getElementById('batchModal').classList.remove('open');currentBatchKey=null;}
 
-function openModal(id){
-  const c = DB.cheques.find(x=>x.id===id);
-  if(!c)return;
-  currentModalId = id;
-  
-  const isAdmin = hasRole(ROLE_ADMIN);
-  const isVerifier = hasRole(ROLE_VERIFIER);
-  const isUser = hasRole(ROLE_USER);
-  
-  let statusOptions = `<option value="${c.status}" selected>${STATUS_LABELS[c.status]||c.status}</option>`;
-  if(isUser||isAdmin){
-    if(c.status==='pending')statusOptions+=`<option value="in_progress">In Progress</option>`;
-    if(c.status==='in_progress')statusOptions+=`<option value="awaiting_verification">Awaiting Verification</option>`;
-  }
-  if(isVerifier||isAdmin){
-    if(c.status==='awaiting_verification')statusOptions+=`<option value="verified">Verified</option>`;
-    if(c.status==='verified')statusOptions+=`<option value="closed">Closed</option>`;
-  }
-  if(isAdmin){
-    if(c.status!=='closed')statusOptions+=`<option value="pending">Reset to Pending</option>`;
-  }
-  
-  const canChangeStatus = (isAdmin||isVerifier||isUser);
-  const canUpload = (isUser||isAdmin);
-  
-  const receiptHtml = c.receiptData ? `<img class="receipt-preview" src="${c.receiptData}" alt="Receipt">` : '';
-  
-  document.getElementById('modalTitle').textContent = `🧾 ${c.chequeNo||'Cheque'}`;
-  document.getElementById('modalBody').innerHTML = `
-    <div class="detail-grid">
-      <div class="detail-field"><div class="dl">Cheque No</div><div class="dv">${esc(c.chequeNo||'—')}</div></div>
-      <div class="detail-field"><div class="dl">Amount</div><div class="dv">${formatCurrency(c.amount)}</div></div>
-      <div class="detail-field"><div class="dl">Bank</div><div class="dv">${esc(c.bank||'—')}</div></div>
-      <div class="detail-field"><div class="dl">Customer</div><div class="dv">${esc(c.customerName||'—')}</div></div>
-      <div class="detail-field"><div class="dl">Location</div><div class="dv">${esc(c.customerSite||c.terminal||'—')}</div></div>
-      <div class="detail-field"><div class="dl">Date</div><div class="dv">${formatDate(c.issueDate)}</div></div>
-      <div class="detail-field"><div class="dl">Batch</div><div class="dv">${esc(c.batch||'—')}</div></div>
-      ${c.jobType==='rejected'?`<div class="detail-field"><div class="dl">Reject Reason</div><div class="dv" style="color:var(--red)">${esc(c.rejectReason||'—')}</div></div>`:''}
-      <div class="detail-field"><div class="dl">Type</div><div class="dv">${c.jobType==='rejected'?'Return Rejected':'Bank-In'}</div></div>
-    </div>
-    
-    ${canChangeStatus ? `<div style="margin-bottom:14px">
-      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Update Status</label>
-      <select class="status-select" id="modalStatus" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;width:100%">
-        ${statusOptions}
-      </select>
-    </div>` : ''}
-    
-    ${canUpload ? `<div class="receipt-section">
-      <h4>📎 Upload Proof</h4>
-      ${receiptHtml}
-      <label class="receipt-upload-label">📁 Choose File
-        <input type="file" id="receiptInput" accept="image/*,.pdf" onchange="uploadReceipt(event)">
-      </label>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:6px" id="receiptName">${c.receiptFileName ? '📄 '+esc(c.receiptFileName) : 'No receipt uploaded'}</div>
-      ${c.receiptData ? '<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="removeReceipt()">🗑 Remove</button>' : ''}
-    </div>` : (c.receiptData ? `<div class="receipt-section"><h4>📎 Proof</h4>${receiptHtml}</div>` : '')}
-    
-    <div>
-      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Notes</label>
-      <textarea class="notes-textarea" id="modalNotes" ${canChangeStatus?'':'readonly'}>${esc(c.notes||'')}</textarea>
-    </div>
-    
-    <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
-      Imported: ${formatDate(c.createdAt)} ${c.importBatch?'· '+esc(c.importBatch):''}
-      ${c.updatedAt?'· Updated: '+formatDate(c.updatedAt):''}
-      ${c.verifiedBy?'· Verified by: '+esc(c.verifiedBy):''}
-    </div>
-  `;
-  
-  document.getElementById('modalFooter').innerHTML = `
-    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-    ${canChangeStatus ? '<button class="btn btn-primary" onclick="saveModal()">💾 Save</button>' : ''}
-  `;
-  
-  document.getElementById('detailModal').classList.add('open');
-}
-
-function closeModal(){
-  document.getElementById('detailModal').classList.remove('open');
-  currentModalId = null;
-}
-
-function saveModal(){
-  const c = DB.cheques.find(x=>x.id===currentModalId);
-  if(!c)return;
-  const newStatus = document.getElementById('modalStatus').value;
-  if(newStatus!==c.status){
-    c.status = newStatus;
-    if(newStatus==='verified'){
-      c.verifiedBy = CURRENT_USER.name||CURRENT_USER.username;
-      c.verifiedAt = new Date().toISOString();
-    }
-  }
-  c.notes = document.getElementById('modalNotes').value;
-  c.updatedAt = new Date().toISOString();
-  saveDB();
-  closeModal();
-  renderDashboard();
-  toast('Cheque updated!','success');
-}
-
-function uploadReceipt(e){
-  const file = e.target.files[0];
-  if(!file)return;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    const c = DB.cheques.find(x=>x.id===currentModalId);
-    if(c){
-      c.receiptData = ev.target.result;
-      c.receiptFileName = file.name;
-      c.receiptUploadDate = new Date().toISOString();
-      c.updatedAt = new Date().toISOString();
-      saveDB();
-      openModal(currentModalId);
-      renderDashboard();
-      toast('Receipt uploaded!','success');
-    }
+function uploadBatchReceipt(e,key){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    DB.batchReceipts[key]={data:ev.target.result,fileName:file.name,uploadedAt:new Date().toISOString(),uploadedBy:CURRENT_USER.username};
+    saveDB();
+    openBatchModal(currentBatchKey);
+    toast('Receipt uploaded for batch','success');
   };
   reader.readAsDataURL(file);
 }
 
-function removeReceipt(){
+function removeBatchReceipt(key){
   if(!confirm('Remove receipt?'))return;
-  const c = DB.cheques.find(x=>x.id===currentModalId);
-  if(c){
-    c.receiptData=null;c.receiptFileName=null;c.receiptUploadDate=null;c.updatedAt=new Date().toISOString();
-    saveDB();
-    openModal(currentModalId);
-    renderDashboard();
-  }
+  delete DB.batchReceipts[key];saveDB();openBatchModal(currentBatchKey);
 }
 
-/* ============================================================
-   PDF IMPORT
-   ============================================================ */
+function submitBatch(key){
+  // Get checked cheque IDs
+  const checked = [...document.querySelectorAll('.chk-cheque:checked')].map(el=>el.dataset.id);
+  if(checked.length===0){toast('Check at least one cheque','error');return;}
+  const notes = document.getElementById('batchNotes')?.value||'';
+  // Update all selected cheques
+  DB.cheques.forEach(c=>{
+    if(checked.includes(c.id)){c.status='awaiting_verification';c.notes=notes||c.notes;c.updatedAt=new Date().toISOString();}
+    else if(c.terminal+ '|' +c.batch===key && c.status==='pending'){/* leave unchecked ones as pending */}
+  });
+  saveDB();
+  closeBatchModal();
+  renderDashboard();renderBatches();
+  toast(`Submitted ${checked.length} cheque(s) for verification`,'success');
+}
+
+function verifyBatch(key,status){
+  const batch = getAllBatches().find(b=>b.key===key);
+  if(!batch)return;
+  batch.cheques.forEach(c=>{
+    if(c.status==='awaiting_verification'||c.status==='verified'){
+      c.status=status;
+      if(status==='verified'){c.verifiedBy=CURRENT_USER.name||CURRENT_USER.username;c.verifiedAt=new Date().toISOString();}
+      c.updatedAt=new Date().toISOString();
+    }
+  });
+  saveDB();
+  closeBatchModal();
+  renderDashboard();renderVerify();
+  toast(status==='verified'?'✅ Batch verified!':'↩️ Batch returned','success');
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 6 — BATCHES PAGE (driver view)
+   ════════════════════════════════════════════════════════════ */
+function renderBatches(){
+  let batches=getAllBatches().filter(b=>b.cheques.some(c=>
+    c.assignedTo===CURRENT_USER.username||hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN)
+  ));
+  const search=(document.getElementById('batchSearch')?.value||'').toLowerCase();
+  const sf=document.getElementById('batchStatusFilter')?.value||'all';
+  batches=batches.filter(b=>{
+    if(sf!=='all'&&b.status!==sf)return false;
+    if(search&&![b.terminal,b.batch].some(x=>x.toLowerCase().includes(search)))return false;
+    return true;
+  });
+  const grid=document.getElementById('batchGrid2');
+  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No batches assigned</h3></div>`;return;}
+  grid.innerHTML=batches.sort((a,b)=>a.status.localeCompare(b.status)).map(b=>`
+    <div class="batch-card" onclick="openBatchModal('${b.key}')">
+      <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)}</div></div>
+        <div class="total-amt">${fc(b.total)}</div></div>
+      <div class="meta"><span>📄 ${b.count} cheques</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
+        ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt uploaded</span>':''}
+      </div>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 7 — VERIFY PAGE
+   ════════════════════════════════════════════════════════════ */
+function renderVerify(){
+  const batches=getAllBatches().filter(b=>b.status==='awaiting_verification');
+  const grid=document.getElementById('verifyGrid');
+  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>Nothing to verify</h3></div>`;return;}
+  grid.innerHTML=batches.map(b=>`
+    <div class="batch-card" onclick="openBatchModal('${b.key}')">
+      <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)}</div></div>
+        <div class="total-amt">${fc(b.total)}</div></div>
+      <div class="meta"><span>📄 ${b.count} cheques</span><span>📎 ${b.hasReceipt?'Receipt uploaded':'No receipt'}</span></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-success btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','verified')">✅ Confirm</button>
+        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','in_progress')">❌ Reject</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 8 — HISTORY
+   ════════════════════════════════════════════════════════════ */
+function renderHistory(){
+  const wrap=document.getElementById('historyWrap');
+  const closed=getAllBatches().filter(b=>b.status==='closed'||b.status==='verified');
+  if(closed.length===0){wrap.innerHTML=`<div class="empty-state"><div class="icon">📭</div><h3>No completed batches</h3></div>`;return;}
+  let html=`<table><thead><tr><th>Location</th><th>Batch</th><th>Cheques</th><th>Total</th><th>Receipt</th><th>Verified By</th><th>Status</th></tr></thead><tbody>`;
+  closed.sort((a,b)=>new Date(b.cheques[0]?.updatedAt)-new Date(a.cheques[0]?.updatedAt)).forEach(b=>{
+    const v=b.cheques.find(c=>c.verifiedBy);
+    html+=`<tr><td><strong>${esc(b.terminal)}</strong></td><td>${esc(b.batch)}</td><td>${b.count}</td>
+      <td>${fc(b.total)}</td><td>${b.hasReceipt?'📎 Yes':'—'}</td>
+      <td>${esc(v?.verifiedBy||'—')}</td>
+      <td><span class="status-badge ${b.status}">${STATUS[b.status]||b.status}</span></td></tr>`;
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
+function exportHistory(){
+  const closed=getAllBatches().filter(b=>b.status==='closed'||b.status==='verified');
+  if(closed.length===0){toast('Nothing to export','info');return;}
+  const data=closed.map(b=>({
+    'Location':b.terminal,'Batch':b.batch,'Cheques':b.count,'Total':b.total,
+    'Status':STATUS[b.status]||b.status,'Receipt':b.hasReceipt?'Yes':'No'
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Completed');
+  XLSX.writeFile(wb,'Cheque_Batches_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Exported!','success');
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 9 — USER MANAGEMENT (Site Admin only)
+   ════════════════════════════════════════════════════════════ */
+function renderUsers(){
+  if(!hasRole(ROLE.SITE_ADMIN)){document.getElementById('usersTableWrap').innerHTML='';return;}
+  let html=`<div style="margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="showAddUser()">+ Add User</button></div>`;
+  html+=`<table class="table-wrap" style="border:none;background:transparent"><table><thead><tr>
+    <th>Username</th><th>Name</th><th>Email</th><th>Roles</th><th>Location</th><th>Actions</th>
+  </tr></thead><tbody>`;
+  DB.users.forEach(u=>{
+    const roleChk=['site_admin','process_admin','user','verifier']
+      .map(r=>`<label style="font-size:11px;margin-right:6px;white-space:nowrap"><input type="checkbox" disabled ${u.roles.includes(r)?'checked':''}> ${ROLE_LABELS[r]}</label>`).join('');
+    html+=`<tr><td><strong>${esc(u.username)}</strong></td><td>${esc(u.name||'')}</td>
+      <td style="font-size:11px">${esc(u.email||'—')}</td><td>${roleChk}</td>
+      <td style="font-size:11px">${esc(u.location||'—')}</td>
+      <td>${u.username==='admin'?'—':`<button class="btn btn-danger btn-xs" onclick="deleteUser(${u.id})">🗑</button>
+      <button class="btn btn-secondary btn-xs" onclick="editUser(${u.id})">✏️</button>`}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('usersTableWrap').innerHTML=html;
+}
+
+function showAddUser(){
+  const locs=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
+  const modalBody=document.getElementById('modalBody');
+  modalBody.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label style="font-size:11px;color:var(--text-muted)">Username *</label><input id="nuUser" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Password *</label><input id="nuPass" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Name</label><input id="nuName" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Email</label><input id="nuEmail" type="email" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Location</label>
+        <select id="nuLoc" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"><option value="">—</option>${locs.map(l=>`<option value="${l}">${l}</option>`).join('')}</select></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Roles</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          ${['site_admin','process_admin','user','verifier'].map(r=>`<label style="font-size:12px"><input type="checkbox" class="nuRole" value="${r}" ${r==='user'?'checked':''}> ${ROLE_LABELS[r]}</label>`).join('')}
+        </div></div>
+    </div>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="addUser()">💾 Create User</button>`;
+  document.getElementById('modalTitle').textContent='👤 Add User';
+  document.getElementById('batchModal').classList.add('open');
+}
+
+function addUser(){
+  const username=document.getElementById('nuUser')?.value?.trim();
+  const password=document.getElementById('nuPass')?.value?.trim();
+  if(!username||!password){toast('Username & password required','error');return;}
+  if(getUser(username)){toast('Username exists','error');return;}
+  const roles=[...document.querySelectorAll('.nuRole:checked')].map(el=>el.value);
+  if(roles.length===0){toast('Select at least one role','error');return;}
+  DB.users.push({
+    id:DB.nextUserId++,username,password,
+    name:document.getElementById('nuName')?.value?.trim()||username,
+    email:document.getElementById('nuEmail')?.value?.trim()||'',
+    location:document.getElementById('nuLoc')?.value||'',
+    roles,createdAt:new Date().toISOString()
+  });
+  saveDB();closeBatchModal();renderUsers();toast(`User "${username}" created`,'success');
+}
+
+function editUser(id){
+  const u=DB.users.find(x=>x.id===id);if(!u)return;
+  const locs=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
+  document.getElementById('modalTitle').textContent=`✏️ Edit ${esc(u.username)}`;
+  document.getElementById('modalBody').innerHTML=`
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Leave password blank to keep unchanged.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><label style="font-size:11px;color:var(--text-muted)">New Password</label><input id="euPass" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none" placeholder="Leave blank"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Name</label><input id="euName" value="${esc(u.name)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Email</label><input id="euEmail" type="email" value="${esc(u.email)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Location</label>
+        <select id="euLoc" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"><option value="">—</option>${locs.map(l=>`<option value="${l}" ${u.location===l?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--text-muted)">Roles</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+          ${['site_admin','process_admin','user','verifier'].map(r=>`<label style="font-size:12px"><input type="checkbox" class="euRole" value="${r}" ${u.roles.includes(r)?'checked':''}> ${ROLE_LABELS[r]}</label>`).join('')}
+        </div></div>
+    </div>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveEditUser(${id})">💾 Save</button>`;
+  document.getElementById('batchModal').classList.add('open');
+}
+
+function saveEditUser(id){
+  const u=DB.users.find(x=>x.id===id);if(!u)return;
+  const pwd=document.getElementById('euPass')?.value?.trim();
+  if(pwd)u.password=pwd;
+  u.name=document.getElementById('euName')?.value?.trim()||u.name;
+  u.email=document.getElementById('euEmail')?.value?.trim()||'';
+  u.location=document.getElementById('euLoc')?.value||'';
+  u.roles=[...document.querySelectorAll('.euRole:checked')].map(el=>el.value);
+  if(u.roles.length===0){toast('Select at least one role','error');return;}
+  saveDB();closeBatchModal();renderUsers();toast('User updated','success');
+}
+
+function deleteUser(id){if(!confirm('Delete?'))return;DB.users=DB.users.filter(u=>u.id!==id);saveDB();renderUsers();}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 10 — SETTINGS (Branch config)
+   ════════════════════════════════════════════════════════════ */
+function renderSettings(){
+  const terminals=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
+  const branches=[...new Set(Object.values(DB.branchMap))].sort();
+  let html=`<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+    <input id="newBranchName" placeholder="New branch name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1">
+    <button class="btn btn-sm btn-primary" onclick="createBranch()">+ Add Branch</button>
+  </div>`;
+  
+  // Branch list with terminals
+  const grouped={};
+  terminals.forEach(t=>{
+    const b=DB.branchMap[t]||'Unassigned';
+    if(!grouped[b])grouped[b]=[];
+    grouped[b].push(t);
+  });
+  
+  Object.keys(grouped).sort().forEach(b=>{
+    html+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+      <div style="background:var(--surface2);padding:8px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
+        <span>${esc(b)}</span>
+        ${b!=='Unassigned'?`<button class="btn btn-danger btn-xs" onclick="deleteBranch('${b}')">🗑</button>`:''}
+      </div>
+      <div style="padding:6px 12px">`;
+    grouped[b].forEach(t=>{
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
+        <span>${esc(t)}</span>
+        <select onchange="moveTerminal('${t}',this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;outline:none">
+          <option value="">—</option>
+          ${[...new Set([...Object.values(DB.branchMap),'Unassigned'])].sort().map(x=>`<option value="${x}" ${x===b?'selected':''}>${esc(x)}</option>`).join('')}
+        </select>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  document.getElementById('branchConfig').innerHTML=html;
+}
+
+function createBranch(){
+  const name=document.getElementById('newBranchName').value.trim();
+  if(!name||name==='Unassigned'){toast('Enter a branch name','error');return;}
+  saveDB();renderSettings();document.getElementById('newBranchName').value='';
+  toast(`Branch "${name}" created`,'success');
+}
+
+function moveTerminal(terminal,newBranch){
+  if(!newBranch){delete DB.branchMap[terminal];}
+  else{DB.branchMap[terminal]=newBranch;}
+  saveDB();renderSettings();renderDashboard();
+}
+
+function deleteBranch(name){
+  if(!confirm(`Delete branch "${name}"? Terminals will become Unassigned.`))return;
+  Object.keys(DB.branchMap).forEach(t=>{if(DB.branchMap[t]===name)delete DB.branchMap[t];});
+  saveDB();renderSettings();renderDashboard();
+}
+
+function saveBranchConfig(){saveDB();toast('Branch config saved','success');}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 11 — PDF IMPORT
+   ════════════════════════════════════════════════════════════ */
 let parsedImportRows = [];
 const dz = document.getElementById('dropZone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});
@@ -617,408 +854,124 @@ dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover'
   else toast('Please drop a PDF file','error')});
 
 async function handlePDFUpload(ev){
-  const file = ev.target.files[0];
-  if(!file)return;
-  
+  const file = ev.target.files[0]; if(!file) return;
   document.getElementById('importProgress').style.display='block';
   document.getElementById('importContent').style.display='none';
   document.getElementById('importProgressFill').style.width='10%';
   document.getElementById('importStatus').textContent='Reading PDF...';
-  
   try{
-    const arrayBuffer = await file.arrayBuffer();
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-    
+    const ab=await file.arrayBuffer();
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
     document.getElementById('importProgressFill').style.width='30%';
     document.getElementById('importStatus').textContent=`Parsing ${pdf.numPages} pages...`;
-    
-    let fullText = '';
+    let fullText='';
     for(let i=1;i<=pdf.numPages;i++){
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      
-      // Group items by their Y position to reconstruct lines
-      const lines = {};
-      const VIEW_SCALE = 5; // rounding tolerance
-      for (const item of textContent.items) {
-        const y = Math.round(item.transform[5] / VIEW_SCALE) * VIEW_SCALE;
-        if (!lines[y]) lines[y] = [];
-        lines[y].push({ text: item.str, x: item.transform[4] });
-      }
-      
-      // Sort lines top-to-bottom, then left-to-right within each line
-      const sortedYs = Object.keys(lines).sort((a,b)=>parseInt(a)-parseInt(b));
-      for (const y of sortedYs) {
-        const col = lines[y].sort((a,b)=>a.x-b.x);
-        fullText += col.map(c=>c.text).join(' ') + '\n';
-      }
+      const page=await pdf.getPage(i), tc=await page.getTextContent();
+      const lines={};const VS=5;
+      tc.items.forEach(item=>{const y=Math.round(item.transform[5]/VS)*VS;if(!lines[y])lines[y]=[];lines[y].push({text:item.str,x:item.transform[4]});});
+      Object.keys(lines).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(y=>{fullText+=lines[y].sort((a,b)=>a.x-b.x).map(c=>c.text).join(' ')+'\n';});
+      document.getElementById('importProgressFill').style.width=30+(i/pdf.numPages)*50;
     }
-    
     document.getElementById('importProgressFill').style.width='80%';
-    document.getElementById('importStatus').textContent='Classifying entries...';
-    
-    // Detect report type
-    const isRejected = fullText.includes('Cheque Rejected Listing')||fullText.includes('Rejected Listing');
-    const isBankIn = fullText.includes('Cheque Bank-In Listing')||fullText.includes('CollectionBatch');
-    
-    if(!isRejected&&!isBankIn){toast('Unknown PDF format — not a TNB SmartCIT report','error');document.getElementById('importProgress').style.display='none';return;}
-    
-    if(isRejected) parsedImportRows = parseRejectedPDF(fullText);
-    else parsedImportRows = parseBankInPDF(fullText);
-    
+    document.getElementById('importStatus').textContent='Classifying...';
+    const isR=fullText.includes('Cheque Rejected Listing')||fullText.includes('Rejected Listing');
+    const isB=fullText.includes('Cheque Bank-In Listing')||fullText.includes('CollectionBatch');
+    if(!isR&&!isB){toast('Unknown PDF format','error');document.getElementById('importProgress').style.display='none';return;}
+    parsedImportRows = isR ? parseRejectedPDF(fullText) : parseBankInPDF(fullText);
     document.getElementById('importProgressFill').style.width='100%';
     document.getElementById('importStatus').textContent=`Found ${parsedImportRows.length} entries`;
-    
     await new Promise(r=>setTimeout(r,300));
     document.getElementById('importProgress').style.display='none';
-    
-    if(parsedImportRows.length===0){
-      toast('No entries found. The PDF format may not be supported.','error');
-      return;
-    }
-    
+    if(parsedImportRows.length===0){toast('No entries found','error');return;}
     document.getElementById('importContent').style.display='block';
-    document.getElementById('importSummary').textContent = `📄 ${parsedImportRows.length} ${isRejected?'rejected':'bank-in'} entries found`;
-    renderImportPreview(parsedImportRows, isRejected);
-    
-  }catch(err){
-    document.getElementById('importProgress').style.display='none';
-    toast('Error parsing PDF: '+err.message,'error');
-  }
+    document.getElementById('importSummary').textContent=`📄 ${parsedImportRows.length} entries · ${isR?'Rejected':'Bank-In'} · ${pdf.numPages} pages`;
+    renderImportPreview(parsedImportRows, isR);
+  }catch(err){document.getElementById('importProgress').style.display='none';toast('Error: '+err.message,'error');}
 }
 
 function parseBankInPDF(text){
-  const entries = [];
-  const lines = text.split('\n');
-  for(let i=0;i<lines.length;i++){
-    const line = lines[i].trim();
-    if(!line) continue;
-    // PDF.js outputs format: "1   ASTR01 - Alor Setar 590765  003172   90,404.30 150423 PUBLIC"
-    // Notice: 2-3 spaces between seq and terminal, batch sometimes has leading space
-    // Also lines within a batch may be in reverse order
-    // Using flexible multi-space split approach
-    const parts = line.split(/\s{2,}/).filter(p=>p.trim());
-    if(parts.length >= 5) {
-      // First part should be "1" or similar
-      const seqMatch = parts[0].match(/^\d+$/);
-      if(!seqMatch) continue;
-      
-      // Second part: "ASTR01 - Alor Setar" or "AMBS01 - AMBS"
-      const termMatch = parts[1].match(/^([A-Z0-9]{3,8})\s*[-–]\s*(.+)/);
-      if(!termMatch) continue;
-      
-      const terminal = termMatch[1];
-      const location = termMatch[2].trim();
-      
-      // Third part: "590765" (tran no)
-      // Fourth part: "003172" or " 003172" (batch - may have leading space)
-      const tran = parts[2].trim();
-      let batch = parts[3].trim();
-      let amtStr = '';
-      let chequeNo = '';
-      let bank = '';
-      
-      // Remaining parts depend on whether amount is present
-      // Format: ... amount cheque_no BANK or ... 0.00 cheque_no BANK
-      // or batch might have been split differently
-      if (parts.length >= 7) {
-        // All fields present: seq | term-loc | tran | batch | amount | cheque | bank
-        amtStr = parts[4].trim();
-        chequeNo = parts[5].trim();
-        bank = parts[6].trim();
-      } else if (parts.length === 6) {
-        // Missing amount or merged
-        // Check if parts[4] has comma (it's an amount)
-        if (parts[4].includes(',')) {
-          amtStr = parts[4].trim();
-          chequeNo = parts[5].trim();
-        } else if (parts[5].includes(',')) {
-          chequeNo = parts[4].trim();
-          amtStr = parts[5].trim();
-        } else {
-          chequeNo = parts[4].trim();
-          bank = parts[5].trim();
-        }
-      } else if (parts.length === 5) {
-        chequeNo = parts[4].trim();
-      }
-      
-      // Bank might be in chequeNo field if not extracted
-      if (!bank && chequeNo) {
-        const bm = chequeNo.match(/^(\d+)\s+([A-Za-z\s]+)$/);
-        if (bm) {
-          chequeNo = bm[1];
-          bank = bm[2].trim();
-        }
-      }
-      
-      if (chequeNo && /^\d+$/.test(chequeNo.trim())) {
-        entries.push({
-          id:genId(), chequeNo: chequeNo.trim(), bank: bank||'',
-          amount: parseFloat((amtStr||'0').replace(/,/g,''))||0,
-          customerName: location||terminal, customerSite: location||'',
-          terminal: terminal, batch: batch, tranNo: tran,
-          issueDate: new Date().toISOString().split('T')[0],
-          jobType:'bankin', status:'pending',
-          assignedTo:'', receiptData:null, receiptFileName:null,
-          rejectReason:'', notes:'', importBatch:'PDF-'+new Date().toISOString().slice(0,10),
-          createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-        });
-      }
-    }
-  }
+  const entries=[];
+  text.split('\n').forEach(line=>{
+    const parts=line.trim().split(/\s{2,}/).filter(p=>p.trim());
+    if(parts.length<5)return;
+    if(!/^\d+$/.test(parts[0]))return;
+    const tm=parts[1].match(/^([A-Z0-9]{3,8})\s*[-–]\s*(.+)/);if(!tm)return;
+    const terminal=tm[1],location=tm[2].trim(),tran=parts[2].trim(),batch=parts[3].trim();
+    let amt='',cheque='',bank='';
+    if(parts.length>=7){amt=parts[4];cheque=parts[5];bank=parts[6];}
+    else if(parts.length===6){
+      if(parts[4].includes(',')){amt=parts[4];cheque=parts[5];}
+      else{cheque=parts[4];bank=parts[5];}
+    }else if(parts.length===5)cheque=parts[4];
+    if(!bank&&cheque){const bm=cheque.match(/^(\d+)\s+([A-Za-z\s]+)$/);if(bm){cheque=bm[1];bank=bm[2].trim();}}
+    if(!cheque||!/^\d+$/.test(cheque.trim()))return;
+    entries.push({id:genId(),chequeNo:cheque.trim(),bank:bank||'',amount:parseFloat((amt||'0').replace(/,/g,''))||0,
+      customerName:location||terminal,customerSite:location||'',terminal,batch,tranNo:tran,
+      issueDate:new Date().toISOString().split('T')[0],jobType:'bankin',status:'pending',
+      assignedTo:'',receiptData:null,receiptFileName:null,rejectReason:'',notes:'',
+      importBatch:'PDF-'+new Date().toISOString().slice(0,10),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+  });
   return entries;
 }
 
 function parseRejectedPDF(text){
-  const entries = [];
-  const lines = text.split('\n');
-  let currentCentre='', currentReason='', currentMulti=0, currentReject=0;
-  for(let i=0;i<lines.length;i++){
-    const line = lines[i].trim();
-    if(!line)continue;
-    
-    const sc = line.match(/Service Centre:\s*(\S+)\s*(.*)/);
+  const entries=[];let cc='',cr='',cm=0,cra=0;
+  text.split('\n').forEach(line=>{
+    const l=line.trim();if(!l)return;
+    const sc=l.match(/Service Centre:\s*(\S+)\s*(.*)/);
     if(sc){
-      currentCentre=sc[1]+' '+sc[2];
-      const amts=[...line.matchAll(/([\d,]+\.\d{2})/g)].map(m=>parseFloat(m[1].replace(/,/g,'')));
-      if(amts.length>=2){currentMulti=amts[amts.length-2];currentReject=amts[amts.length-1];}
-      const rs=line.match(/[\d,]+\.\d{2}\s+[\d,]+\.\d{2}\s+(.+)/);
-      if(rs)currentReason=rs[1].trim();
-      continue;
+      cc=sc[1]+' '+sc[2];const amts=[...l.matchAll(/([\d,]+\.\d{2})/g)].map(m=>parseFloat(m[1].replace(/,/g,'')));
+      if(amts.length>=2){cm=amts[amts.length-2];cra=amts[amts.length-1];}
+      const rs=l.match(/[\d,]+\.\d{2}\s+[\d,]+\.\d{2}\s+(.+)/);if(rs)cr=rs[1].trim();return;
     }
-    // Match: digit + terminal + batch(6digits) + tran + cheque
-    const m = line.match(/^(\d+)\s+([A-Z0-9]{3,8})\s+(\d{6})\s+(\d+)\s+(\S+)/);
+    const m=l.match(/^(\d+)\s+([A-Z0-9]{3,8})\s+(\d{6})\s+(\d+)\s+(\S+)/);
     if(m){
       const [,seq,term,batch,tran,cheque]=m;
-      entries.push({
-        id:genId(), chequeNo:cheque, bank:'', amount:currentReject,
-        customerName:currentCentre, customerSite:'',
-        terminal:term, batch:batch, tranNo:tran,
-        issueDate:new Date().toISOString().split('T')[0],
-        jobType:'rejected', status:'pending',
-        assignedTo:'', receiptData:null, receiptFileName:null,
-        rejectReason:currentReason, notes:'', importBatch:'PDF-'+new Date().toISOString().slice(0,10),
-        createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-      });
+      entries.push({id:genId(),chequeNo:cheque,bank:'',amount:cra,customerName:cc,customerSite:'',
+        terminal:term,batch,tranNo:tran,issueDate:new Date().toISOString().split('T')[0],
+        jobType:'rejected',status:'pending',assignedTo:'',receiptData:null,receiptFileName:null,
+        rejectReason:cr,notes:'',importBatch:'PDF-'+new Date().toISOString().slice(0,10),
+        createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
     }
-  }
+  });
   return entries;
 }
 
-function renderImportPreview(rows, isRejected){
+function renderImportPreview(rows,isRejected){
   const wrap=document.getElementById('previewWrap');
   const headers=['Cheque No','Amount','Location','Bank/Reason'];
   let html='<table><thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>';
-  const max=Math.min(rows.length,30);
-  for(let i=0;i<max;i++){
-    const r=rows[i];
-    html+=`<tr><td>${esc(r.chequeNo)}</td><td>${formatCurrency(r.amount)}</td><td>${esc(r.terminal)}</td>
-      <td>${isRejected?esc(r.rejectReason?.slice(0,30))||'—':esc(r.bank||'—')}</td></tr>`;
-  }
-  if(rows.length>max)html+=`<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">… and ${rows.length-max} more</td></tr>`;
+  rows.slice(0,30).forEach(r=>{
+    html+=`<tr><td>${esc(r.chequeNo)}</td><td>${fc(r.amount)}</td><td>${esc(r.terminal)}</td>
+      <td>${isRejected?esc((r.rejectReason||'').slice(0,30))||'—':esc(r.bank||'—')}</td></tr>`;
+  });
+  if(rows.length>30)html+=`<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">… and ${rows.length-30} more</td></tr>`;
   html+='</tbody></table>';
   wrap.innerHTML=html;
 }
 
 function confirmImport(){
-  if(parsedImportRows.length===0)return;
-  let imported=0,skipped=0;
-  const now=new Date().toISOString();
-  
+  if(!parsedImportRows.length)return;
+  let imp=0,skp=0;const now=new Date().toISOString();
   parsedImportRows.forEach(r=>{
-    // Assign to a user by location if possible
-    const locUser = DB.users.find(u=>u.location===r.terminal);
-    if(locUser)r.assignedTo = locUser.username;
-    
-    // Skip duplicate (same chequeNo + terminal)
-    const dup = DB.cheques.find(c=>c.chequeNo===r.chequeNo&&c.terminal===r.terminal);
-    if(!dup){DB.cheques.push(r);imported++;}
-    else skipped++;
+    const locUser=DB.users.find(u=>u.location===r.terminal);
+    if(locUser)r.assignedTo=locUser.username;
+    if(!DB.cheques.find(c=>c.chequeNo===r.chequeNo&&c.terminal===r.terminal)){DB.cheques.push(r);imp++;}
+    else skp++;
   });
-  
   saveDB();
-  const el=document.getElementById('importResults');
-  el.innerHTML=`<div class="import-results success">✅ Imported ${imported} entries${skipped>0?', skipped '+skipped+' duplicates':''}</div>`;
-  el.scrollIntoView();
-  renderDashboard();
-  toast(`✅ Imported ${imported} entries`,'success');
+  document.getElementById('importResults').innerHTML=`<div style="padding:12px;border-radius:8px;background:var(--green-bg);color:var(--green);font-size:13px;border:1px solid rgba(34,197,94,.2)">✅ Imported ${imp} entries${skp?', skipped '+skp+' duplicates':''}</div>`;
+  renderDashboard();toast(`✅ Imported ${imp} entries`,'success');
 }
 
-function clearImport(){
-  document.getElementById('importContent').style.display='none';
-  document.getElementById('fileInput').value='';
-  document.getElementById('previewWrap').innerHTML='';
-  document.getElementById('importResults').innerHTML='';
-  parsedImportRows=[];
-}
+function clearImport(){document.getElementById('importContent').style.display='none';document.getElementById('fileInput').value='';
+  document.getElementById('previewWrap').innerHTML='';document.getElementById('importResults').innerHTML='';parsedImportRows=[];}
 
-/* ============================================================
-   VERIFY
-   ============================================================ */
-function renderVerify(){
-  const items = DB.cheques.filter(c=>c.status==='awaiting_verification');
-  const grid = document.getElementById('verifyGrid');
-  if(items.length===0){
-    grid.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>Nothing to verify</h3><p>All jobs are accounted for.</p></div>`;
-    return;
-  }
-  grid.innerHTML=items.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).map(c=>`
-    <div class="cheque-card" onclick="openModal('${c.id}')">
-      <div class="top-row">
-        <div class="cheque-no">${esc(c.chequeNo||'—')}</div>
-        <div class="amount">${formatCurrency(c.amount)}</div>
-      </div>
-      <div class="customer">${esc(c.customerName||'—')}</div>
-      <div class="meta"><span>📍 ${esc(c.terminal||'—')}</span><span>📎 ${c.receiptFileName?'Receipt uploaded':'No receipt'}</span></div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button class="btn btn-success btn-xs" onclick="event.stopPropagation();quickVerify('${c.id}','verified')">✅ Confirm</button>
-        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();quickVerify('${c.id}','in_progress')">❌ Reject</button>
-      </div>
-    </div>`).join('');
-}
-
-function quickVerify(id,status){
-  const c = DB.cheques.find(x=>x.id===id);
-  if(!c)return;
-  c.status=status;
-  if(status==='verified'){c.verifiedBy=CURRENT_USER.name||CURRENT_USER.username;c.verifiedAt=new Date().toISOString();}
-  c.updatedAt=new Date().toISOString();
-  saveDB();
-  renderVerify();
-  renderDashboard();
-  toast(status==='verified'?'✅ Verified!':'↩️ Returned for re-submission','success');
-}
-
-/* ============================================================
-   HISTORY
-   ============================================================ */
-function renderHistory(){
-  const wrap=document.getElementById('historyWrap');
-  const closed=DB.cheques.filter(c=>c.status==='closed'||c.status==='verified');
-  if(closed.length===0){
-    wrap.innerHTML=`<div class="empty-state"><div class="icon">📭</div><h3>No completed transactions</h3></div>`;
-    return;
-  }
-  let html=`<table><thead><tr><th>Cheque</th><th>Customer</th><th>Amount</th><th>Type</th><th>Receipt</th><th>Verified By</th><th>Status</th></tr></thead><tbody>`;
-  closed.sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).forEach(c=>{
-    html+=`<tr><td><strong>${esc(c.chequeNo||'—')}</strong></td>
-      <td>${esc(c.customerName||'—')}</td>
-      <td>${formatCurrency(c.amount)}</td>
-      <td>${c.jobType==='rejected'?'Return':'Bank-In'}</td>
-      <td>${c.receiptFileName?'📎 Yes':'—'}</td>
-      <td>${esc(c.verifiedBy||'—')}</td>
-      <td><span class="status-badge ${c.status}">${STATUS_LABELS[c.status]||c.status}</span></td></tr>`;
-  });
-  html+='</tbody></table>';
-  wrap.innerHTML=html;
-}
-
-function exportHistory(){
-  const closed=DB.cheques.filter(c=>c.status==='closed'||c.status==='verified');
-  if(closed.length===0){toast('Nothing to export','info');return;}
-  const data=closed.map(c=>({
-    'Cheque No':c.chequeNo,'Customer':c.customerName,'Amount':c.amount,
-    'Type':c.jobType==='rejected'?'Return':'Bank-In',
-    'Status':STATUS_LABELS[c.status]||c.status,
-    'Verified By':c.verifiedBy||'','Receipt':c.receiptFileName?'Yes':'No'
-  }));
-  const ws=XLSX.utils.json_to_sheet(data);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Completed');
-  XLSX.writeFile(wb,'Cheque_Recon_History_'+new Date().toISOString().slice(0,10)+'.xlsx');
-  toast('Exported!','success');
-}
-
-/* ============================================================
-   USER MANAGEMENT (Admin only)
-   ============================================================ */
-function renderUsers(){
-  if(!hasRole(ROLE_ADMIN)){document.getElementById('usersTableWrap').innerHTML='';return;}
-  let html=`<table class="user-table"><thead><tr>
-    <th>Username</th><th>Name</th><th>Roles</th><th>Location</th><th>Actions</th>
-  </tr></thead><tbody>`;
-  
-  DB.users.forEach(u=>{
-    const roleChecks = [
-      {role:ROLE_ADMIN,label:'Admin'},{role:ROLE_USER,label:'User'},{role:ROLE_VERIFIER,label:'Verifier'}
-    ].map(r=>`<label style="font-size:12px;margin-right:8px"><input type="checkbox" ${u.roles.includes(r.role)?'checked':''} disabled> ${r.label}</label>`).join('');
-    
-    html+=`<tr>
-      <td><strong>${esc(u.username)}</strong></td>
-      <td>${esc(u.name||'')}</td>
-      <td>${roleChecks}</td>
-      <td style="font-size:12px">${esc(u.location||'—')}</td>
-      <td>${u.username==='admin'?'—':`<button class="btn btn-danger btn-xs" onclick="deleteUser(${u.id})">🗑</button>`}</td>
-    </tr>`;
-  });
-  
-  // Add user form
-  html+=`<tr class="add-user-row"><td colspan="5" style="padding:12px 14px">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
-      <div><label style="font-size:11px;color:var(--text-muted);display:block">Username</label><input type="text" id="newUsername" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;width:120px"></div>
-      <div><label style="font-size:11px;color:var(--text-muted);display:block">Password</label><input type="text" id="newPassword" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;width:120px"></div>
-      <div><label style="font-size:11px;color:var(--text-muted);display:block">Name</label><input type="text" id="newName" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;width:140px"></div>
-      <div><label style="font-size:11px;color:var(--text-muted);display:block">Location</label>
-        <select id="newLocation" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;width:120px">
-          <option value="">—</option>
-          ${[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort().map(l=>`<option value="${l}">${l}</option>`).join('')}
-        </select>
-      </div>
-      <div><label style="font-size:11px;color:var(--text-muted);display:block">Roles</label>
-        <div style="display:flex;gap:6px">
-          <label style="font-size:12px"><input type="checkbox" id="newRoleAdmin"> Admin</label>
-          <label style="font-size:12px"><input type="checkbox" id="newRoleUser" checked> User</label>
-          <label style="font-size:12px"><input type="checkbox" id="newRoleVerifier"> Verifier</label>
-        </div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="addUser()">+ Add</button>
-    </div>
-  </td></tr>`;
-  
-  html+='</tbody></table>';
-  document.getElementById('usersTableWrap').innerHTML=html;
-}
-
-function addUser(){
-  const username=document.getElementById('newUsername').value.trim();
-  const password=document.getElementById('newPassword').value.trim();
-  const name=document.getElementById('newName').value.trim();
-  const location=document.getElementById('newLocation').value;
-  if(!username||!password){toast('Username and password required','error');return;}
-  if(getUser(username)){toast('Username already exists','error');return;}
-  const roles=[];
-  if(document.getElementById('newRoleAdmin').checked)roles.push(ROLE_ADMIN);
-  if(document.getElementById('newRoleUser').checked)roles.push(ROLE_USER);
-  if(document.getElementById('newRoleVerifier').checked)roles.push(ROLE_VERIFIER);
-  if(roles.length===0){toast('Select at least one role','error');return;}
-  
-  DB.users.push({id:DB.nextUserId++,username,password,name:name||username,roles,location:location||'',createdAt:new Date().toISOString()});
-  saveDB();
-  renderUsers();
-  renderDashboard();
-  setupTabs();
-  toast(`User "${username}" created!`,'success');
-  document.getElementById('newUsername').value='';document.getElementById('newPassword').value='';document.getElementById('newName').value='';
-}
-
-function deleteUser(id){
-  if(!confirm('Delete this user?'))return;
-  DB.users=DB.users.filter(u=>u.id!==id);
-  saveDB();
-  renderUsers();
-  toast('User deleted','info');
-}
-
-/* ============================================================
-   INIT
-   ============================================================ */
-function init(){
-  loadDB();
-  renderUsers();
-}
-document.addEventListener('DOMContentLoaded',init);
+/* ════════════════════════════════════════════════════════════
+   MODULE 12 — INIT
+   ════════════════════════════════════════════════════════════ */
+loadDB();
 </script>
 </body>
 </html>

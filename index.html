@@ -241,7 +241,6 @@ a{color:var(--accent);text-decoration:none}
     </div>
     <div class="preview-table-wrap" id="previewWrap"></div>
     <div id="importResults"></div>
-    <pre id="debugRawText" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;margin-top:12px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
   </div>
 </div>
 
@@ -674,16 +673,8 @@ async function handlePDFUpload(ev){
     await new Promise(r=>setTimeout(r,300));
     document.getElementById('importProgress').style.display='none';
     
-    // DEBUG: Show raw text preview
-    console.log('RAW TEXT (first 3000 chars):', fullText.substring(0, 3000));
-    document.getElementById('debugRawText').textContent = fullText.substring(0, 5000);
-    document.getElementById('debugRawText').style.display = 'block';
-    
     if(parsedImportRows.length===0){
-      toast('No entries found in PDF. Check debug output below for text format.','error');
-      document.getElementById('importContent').style.display='block';
-      document.getElementById('importSummary').textContent = `⚠️ 0 entries — debugging info below`;
-      renderImportPreview([], false);
+      toast('No entries found. The PDF format may not be supported.','error');
       return;
     }
     
@@ -703,21 +694,78 @@ function parseBankInPDF(text){
   for(let i=0;i<lines.length;i++){
     const line = lines[i].trim();
     if(!line) continue;
-    // Match: starts with digit, then terminal code (letters+digits), then location, then numbers
-    // Flexible: handles variable spacing from PDF.js output
-    const m = line.match(/^(\d+)\s+([A-Z0-9]{3,8})\s*[-–]\s*(.+?)\s+(\d+)\s+(\d{6})(?:\s+([\d,]+\.\d{2}))?\s+(\d+)\s+(\S+)/);
-    if(m){
-      const [,seq,term,loc,tran,batch,amt,cheque,bank]=m;
-      entries.push({
-        id:genId(), chequeNo:cheque, bank:bank, amount:parseFloat((amt||'0').replace(/,/g,''))||0,
-        customerName:loc||term, customerSite:loc||'',
-        terminal:term, batch:batch, tranNo:tran,
-        issueDate:new Date().toISOString().split('T')[0],
-        jobType:'bankin', status:'pending',
-        assignedTo:'', receiptData:null, receiptFileName:null,
-        rejectReason:'', notes:'', importBatch:'PDF-'+new Date().toISOString().slice(0,10),
-        createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-      });
+    // PDF.js outputs format: "1   ASTR01 - Alor Setar 590765  003172   90,404.30 150423 PUBLIC"
+    // Notice: 2-3 spaces between seq and terminal, batch sometimes has leading space
+    // Also lines within a batch may be in reverse order
+    // Using flexible multi-space split approach
+    const parts = line.split(/\s{2,}/).filter(p=>p.trim());
+    if(parts.length >= 5) {
+      // First part should be "1" or similar
+      const seqMatch = parts[0].match(/^\d+$/);
+      if(!seqMatch) continue;
+      
+      // Second part: "ASTR01 - Alor Setar" or "AMBS01 - AMBS"
+      const termMatch = parts[1].match(/^([A-Z0-9]{3,8})\s*[-–]\s*(.+)/);
+      if(!termMatch) continue;
+      
+      const terminal = termMatch[1];
+      const location = termMatch[2].trim();
+      
+      // Third part: "590765" (tran no)
+      // Fourth part: "003172" or " 003172" (batch - may have leading space)
+      const tran = parts[2].trim();
+      let batch = parts[3].trim();
+      let amtStr = '';
+      let chequeNo = '';
+      let bank = '';
+      
+      // Remaining parts depend on whether amount is present
+      // Format: ... amount cheque_no BANK or ... 0.00 cheque_no BANK
+      // or batch might have been split differently
+      if (parts.length >= 7) {
+        // All fields present: seq | term-loc | tran | batch | amount | cheque | bank
+        amtStr = parts[4].trim();
+        chequeNo = parts[5].trim();
+        bank = parts[6].trim();
+      } else if (parts.length === 6) {
+        // Missing amount or merged
+        // Check if parts[4] has comma (it's an amount)
+        if (parts[4].includes(',')) {
+          amtStr = parts[4].trim();
+          chequeNo = parts[5].trim();
+        } else if (parts[5].includes(',')) {
+          chequeNo = parts[4].trim();
+          amtStr = parts[5].trim();
+        } else {
+          chequeNo = parts[4].trim();
+          bank = parts[5].trim();
+        }
+      } else if (parts.length === 5) {
+        chequeNo = parts[4].trim();
+      }
+      
+      // Bank might be in chequeNo field if not extracted
+      if (!bank && chequeNo) {
+        const bm = chequeNo.match(/^(\d+)\s+([A-Za-z\s]+)$/);
+        if (bm) {
+          chequeNo = bm[1];
+          bank = bm[2].trim();
+        }
+      }
+      
+      if (chequeNo && /^\d+$/.test(chequeNo.trim())) {
+        entries.push({
+          id:genId(), chequeNo: chequeNo.trim(), bank: bank||'',
+          amount: parseFloat((amtStr||'0').replace(/,/g,''))||0,
+          customerName: location||terminal, customerSite: location||'',
+          terminal: terminal, batch: batch, tranNo: tran,
+          issueDate: new Date().toISOString().split('T')[0],
+          jobType:'bankin', status:'pending',
+          assignedTo:'', receiptData:null, receiptFileName:null,
+          rejectReason:'', notes:'', importBatch:'PDF-'+new Date().toISOString().slice(0,10),
+          createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
+        });
+      }
     }
   }
   return entries;

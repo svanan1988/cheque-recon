@@ -241,6 +241,7 @@ a{color:var(--accent);text-decoration:none}
     </div>
     <div class="preview-table-wrap" id="previewWrap"></div>
     <div id="importResults"></div>
+    <pre id="debugRawText" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;margin-top:12px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
   </div>
 </div>
 
@@ -673,8 +674,16 @@ async function handlePDFUpload(ev){
     await new Promise(r=>setTimeout(r,300));
     document.getElementById('importProgress').style.display='none';
     
+    // DEBUG: Show raw text preview
+    console.log('RAW TEXT (first 3000 chars):', fullText.substring(0, 3000));
+    document.getElementById('debugRawText').textContent = fullText.substring(0, 5000);
+    document.getElementById('debugRawText').style.display = 'block';
+    
     if(parsedImportRows.length===0){
-      toast('No entries found in PDF','error');
+      toast('No entries found in PDF. Check debug output below for text format.','error');
+      document.getElementById('importContent').style.display='block';
+      document.getElementById('importSummary').textContent = `⚠️ 0 entries — debugging info below`;
+      renderImportPreview([], false);
       return;
     }
     

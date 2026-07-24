@@ -32,30 +32,48 @@ input,select,textarea,button{font:inherit;color:inherit}
 /* ════════════════════════════════════════════════
    LAYOUT (sidebar + main)
    ════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════
+   SIDEBAR — collapsible (icons only, expand on hover/click)
+   ════════════════════════════════════════════════ */
 .app-layout{display:none;min-height:100vh}
 .app-layout.open{display:flex}
 
-.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
-.sidebar-brand{padding:18px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
-.sidebar-brand span{color:var(--accent)}
-.sidebar-nav{flex:1;padding:8px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left}
+.sidebar{width:60px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow:hidden;transition:width .25s ease}
+.sidebar:hover,.sidebar.expanded{width:var(--sidebar-w)}
+.sidebar.expanded{overflow-y:auto}
+
+.sidebar-brand{padding:16px 10px;border-bottom:1px solid var(--border);font-size:0;white-space:nowrap;display:flex;align-items:center;gap:8px;min-height:52px}
+.sidebar-brand .brand-icon{font-size:18px;width:40px;text-align:center;flex-shrink:0}
+.sidebar-brand .brand-text{font-size:14px;font-weight:700;opacity:0;transition:opacity .2s ease .1s}
+.sidebar:hover .brand-text,.sidebar.expanded .brand-text{opacity:1}
+.sidebar-brand .brand-text span{color:var(--accent)}
+
+.sidebar-toggle{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:6px;font-size:14px;position:absolute;top:14px;right:8px;display:none;transition:.2s}
+.sidebar-toggle:hover{background:var(--surface2);color:var(--text)}
+.sidebar:hover .sidebar-toggle,.sidebar.expanded .sidebar-toggle{display:block}
+
+.sidebar-nav{flex:1;padding:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:0;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left;white-space:nowrap}
 .nav-item:hover{background:var(--surface2);color:var(--text)}
 .nav-item.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
-.nav-item .icon{font-size:16px;width:22px;text-align:center}
+.nav-item .icon{font-size:16px;width:36px;text-align:center;flex-shrink:0}
+.nav-item .label{font-size:13px;opacity:0;transition:opacity .2s ease .1s}
+.sidebar:hover .nav-item .label,.sidebar.expanded .nav-item .label{opacity:1}
+.sidebar:hover .nav-item,.sidebar.expanded .nav-item{font-size:13px}
 
-.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:12px}
-.sidebar-footer .user-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.sidebar-footer .user-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sidebar-footer .logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;transition:.2s;width:100%}
+.sidebar-footer{padding:10px 12px;border-top:1px solid var(--border);font-size:0;white-space:nowrap}
+.sidebar-footer .user-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;min-height:28px}
+.sidebar-footer .user-row .user-avatar{font-size:14px;width:36px;text-align:center;flex-shrink:0}
+.sidebar-footer .user-row .user-name{font-size:12px;opacity:0;transition:opacity .2s ease .1s;overflow:hidden;text-overflow:ellipsis}
+.sidebar:hover .user-name,.sidebar.expanded .user-name{opacity:1}
+.sidebar-footer .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;opacity:0;transition:opacity .2s ease .1s}
+.sidebar:hover .role-badge,.sidebar.expanded .role-badge{opacity:1}
+.sidebar-footer .logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;padding:4px 10px;border-radius:6px;font-size:0;transition:.2s;width:100%;margin-top:4px}
+.sidebar:hover .logout-btn,.sidebar.expanded .logout-btn{font-size:11px}
 .sidebar-footer .logout-btn:hover{border-color:var(--red);color:var(--red)}
-.role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
-.role-badge.site_admin{background:var(--accent);color:#fff}
-.role-badge.process_admin{background:var(--blue-bg);color:var(--blue)}
-.role-badge.user{background:var(--amber-bg);color:var(--amber)}
-.role-badge.verifier{background:var(--green-bg);color:var(--green)}
 
-.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.main-area{margin-left:60px;flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .25s ease}
+.sidebar:hover ~ .main-area,.sidebar.expanded ~ .main-area{margin-left:var(--sidebar-w)}
 .header-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
 .header-bar h2{font-size:16px;font-weight:600}
 .header-bar h2 .sub{font-size:12px;color:var(--text-muted);font-weight:400}
@@ -141,9 +159,11 @@ input,select,textarea,button{font:inherit;color:inherit}
 @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 
 @media(max-width:768px){
-:root{--sidebar-w:0px}
-.sidebar{display:none}
-.main-area{margin-left:0}
+:root{--sidebar-w:60px}
+.sidebar{width:60px}
+.sidebar:hover,.sidebar.expanded{width:180px}
+.main-area{margin-left:60px}
+.sidebar:hover ~ .main-area,.sidebar.expanded ~ .main-area{margin-left:180px}
 .page{padding:12px 16px}
 .batch-grid{grid-template-columns:1fr}
 .stats{grid-template-columns:repeat(2,1fr)}
@@ -172,14 +192,18 @@ input,select,textarea,button{font:inherit;color:inherit}
 <div class="app-layout" id="appLayout">
   <!-- SIDEBAR -->
   <aside class="sidebar">
-    <div class="sidebar-brand">📋 Cheque <span>Recon</span></div>
+    <div class="sidebar-brand">
+      <span class="brand-icon">📋</span>
+      <span class="brand-text">Cheque <span>Recon</span></span>
+      <button class="sidebar-toggle" onclick="toggleSidebar()">◀</button>
+    </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
     <div class="sidebar-footer">
       <div class="user-row">
-        <span>👤</span>
-        <span class="name" id="sideUserName"></span>
-        <span class="role-badge" id="sideRoleBadge"></span>
+        <span class="user-avatar">👤</span>
+        <span class="user-name" id="sideUserName"></span>
       </div>
+      <span class="role-badge" id="sideRoleBadge"></span>
       <button class="logout-btn" onclick="doLogout()">Sign Out</button>
     </div>
   </aside>
@@ -395,7 +419,7 @@ function buildSidebar(){
   NAV_ITEMS.forEach(item=>{
     if(!item.roles.includes('*')&&!item.roles.some(r=>hasRole(r)))return;
     const btn=document.createElement('button');btn.className='nav-item';btn.dataset.page=item.id;
-    btn.innerHTML=`<span class="icon">${item.icon}</span>${item.label}`;
+    btn.innerHTML=`<span class="icon">${item.icon}</span><span class="label">${item.label}</span>`;
     btn.onclick=()=>switchPage(item.id);
     nav.appendChild(btn);
   });
@@ -404,6 +428,13 @@ function buildSidebar(){
   const rolesText=CURRENT_USER.roles.map(r=>rl[r]||r).join(', ');
   const badge=document.getElementById('sideRoleBadge');badge.textContent=rolesText;
   const cls=CURRENT_USER.roles[0]||'user';badge.className='role-badge '+cls;
+}
+
+let sidebarExpanded = false;
+function toggleSidebar(){
+  sidebarExpanded = !sidebarExpanded;
+  document.querySelector('.sidebar').classList.toggle('expanded', sidebarExpanded);
+  document.querySelector('.sidebar-toggle').textContent = sidebarExpanded ? '✕' : '☰';
 }
 
 function switchPage(id){
@@ -892,26 +923,30 @@ async function handlePDFUpload(ev){
 
 function parseBankInPDF(text){
   const entries=[];
+  // Format from PDF.js (Y-coord reconstructed lines):
+  // "1 ASTR01 - Alor Setar 590699 003172 1,237.00 000390 MBSB"
+  // Or without amount: "3 ASTR01 - Alor Setar 590830 003172 158154 ISLAM"
+  // Bank name can have spaces: "001034 CIMB BANK"
+  const regex = /^(\d+)\s+([A-Z0-9]{3,8})\s*[-–]\s*(.+?)\s+(\d+)\s+(\d{6})(?:\s+([\d,]+\.\d{2}))?\s+(\d+)\s+(.+)$/;
+  
   text.split('\n').forEach(line=>{
-    const parts=line.trim().split(/\s{2,}/).filter(p=>p.trim());
-    if(parts.length<5)return;
-    if(!/^\d+$/.test(parts[0]))return;
-    const tm=parts[1].match(/^([A-Z0-9]{3,8})\s*[-–]\s*(.+)/);if(!tm)return;
-    const terminal=tm[1],location=tm[2].trim(),tran=parts[2].trim(),batch=parts[3].trim();
-    let amt='',cheque='',bank='';
-    if(parts.length>=7){amt=parts[4];cheque=parts[5];bank=parts[6];}
-    else if(parts.length===6){
-      if(parts[4].includes(',')){amt=parts[4];cheque=parts[5];}
-      else{cheque=parts[4];bank=parts[5];}
-    }else if(parts.length===5)cheque=parts[4];
-    if(!bank&&cheque){const bm=cheque.match(/^(\d+)\s+([A-Za-z\s]+)$/);if(bm){cheque=bm[1];bank=bm[2].trim();}}
-    if(!cheque||!/^\d+$/.test(cheque.trim()))return;
-    entries.push({id:genId(),chequeNo:cheque.trim(),bank:bank||'',amount:parseFloat((amt||'0').replace(/,/g,''))||0,
-      customerName:location||terminal,customerSite:location||'',terminal,batch,tranNo:tran,
-      issueDate:new Date().toISOString().split('T')[0],jobType:'bankin',status:'pending',
+    const m=line.trim().match(regex);
+    if(!m) return;
+    const [,seq,terminal,location,tran,batch,amtStr,chequeNo,bank]=m;
+    const amount = amtStr ? parseFloat(amtStr.replace(/,/g,'')) : 0;
+    entries.push({
+      id:genId(),chequeNo:chequeNo.trim(),bank:bank.trim(),amount,
+      customerName:location.trim(),customerSite:location.trim(),
+      terminal:terminal.trim(),batch:batch.trim(),tranNo:tran.trim(),
+      issueDate:new Date().toISOString().split('T')[0],
+      jobType:'bankin',status:'pending',
       assignedTo:'',receiptData:null,receiptFileName:null,rejectReason:'',notes:'',
-      importBatch:'PDF-'+new Date().toISOString().slice(0,10),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+      importBatch:'PDF-'+new Date().toISOString().slice(0,10),
+      createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+    });
   });
+  console.log('Bank-In parser: extracted', entries.length, 'entries');
+  if(entries.length===0) console.log('Sample lines that failed:', text.split('\n').filter(l=>/^\d/.test(l.trim())).slice(0,5));
   return entries;
 }
 

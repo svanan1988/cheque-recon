@@ -692,13 +692,15 @@ function parseBankInPDF(text){
   const entries = [];
   const lines = text.split('\n');
   for(let i=0;i<lines.length;i++){
-    const line = lines[i];
-    // Pattern: number + terminal + location + tran + batch + amount + cheque + bank
-    const m = line.match(/^(\d+)\s+(\S+)\s*[-–]\s*(.+?)\s+(\d+)\s+(\d{6})\s+([\d,]+\.\d{2}|)\s+(\d+)\s+(\S+)/);
+    const line = lines[i].trim();
+    if(!line) continue;
+    // Match: starts with digit, then terminal code (letters+digits), then location, then numbers
+    // Flexible: handles variable spacing from PDF.js output
+    const m = line.match(/^(\d+)\s+([A-Z0-9]{3,8})\s*[-–]\s*(.+?)\s+(\d+)\s+(\d{6})(?:\s+([\d,]+\.\d{2}))?\s+(\d+)\s+(\S+)/);
     if(m){
       const [,seq,term,loc,tran,batch,amt,cheque,bank]=m;
       entries.push({
-        id:genId(), chequeNo:cheque, bank:bank, amount:parseFloat(amt.replace(/,/g,''))||0,
+        id:genId(), chequeNo:cheque, bank:bank, amount:parseFloat((amt||'0').replace(/,/g,''))||0,
         customerName:loc||term, customerSite:loc||'',
         terminal:term, batch:batch, tranNo:tran,
         issueDate:new Date().toISOString().split('T')[0],
@@ -717,7 +719,9 @@ function parseRejectedPDF(text){
   const lines = text.split('\n');
   let currentCentre='', currentReason='', currentMulti=0, currentReject=0;
   for(let i=0;i<lines.length;i++){
-    const line = lines[i];
+    const line = lines[i].trim();
+    if(!line)continue;
+    
     const sc = line.match(/Service Centre:\s*(\S+)\s*(.*)/);
     if(sc){
       currentCentre=sc[1]+' '+sc[2];
@@ -727,7 +731,8 @@ function parseRejectedPDF(text){
       if(rs)currentReason=rs[1].trim();
       continue;
     }
-    const m = line.match(/^\s*(\d+)\s+(\w+)\s+(\d{6})\s+(\d+)\s+(\S+)/);
+    // Match: digit + terminal + batch(6digits) + tran + cheque
+    const m = line.match(/^(\d+)\s+([A-Z0-9]{3,8})\s+(\d{6})\s+(\d+)\s+(\S+)/);
     if(m){
       const [,seq,term,batch,tran,cheque]=m;
       entries.push({

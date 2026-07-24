@@ -388,6 +388,11 @@ function doLogin(e){
   if(!user){document.getElementById('loginError').style.display='block';return;}
   document.getElementById('loginError').style.display='none';
   CURRENT_USER=user;
+  sessionStorage.setItem('chequeUser', JSON.stringify({username:user.username}));
+  enterApp();
+}
+
+function enterApp(){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appLayout').classList.add('open');
   buildSidebar();
@@ -396,6 +401,7 @@ function doLogin(e){
 
 function doLogout(){
   CURRENT_USER=null;
+  sessionStorage.removeItem('chequeUser');
   document.getElementById('appLayout').classList.remove('open');
   document.getElementById('loginPage').style.display='flex';
   document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';
@@ -407,8 +413,8 @@ function doLogout(){
 const NAV_ITEMS = [
   {id:'dashboard',label:'Dashboard',icon:'📊',roles:['*']},
   {id:'import',label:'Import PDF',icon:'📥',roles:['site_admin','process_admin']},
-  {id:'batches',label:'My Batches',icon:'📋',roles:['site_admin','user']},
-  {id:'verify',label:'Verify',icon:'✅',roles:['site_admin','verifier']},
+  {id:'batches',label:'My Batches',icon:'📋',roles:['site_admin','process_admin','user']},
+  {id:'verify',label:'Verify',icon:'✅',roles:['site_admin','process_admin','verifier']},
   {id:'history',label:'History',icon:'📜',roles:['*']},
   {id:'users',label:'Users',icon:'👥',roles:['site_admin']},
   {id:'settings',label:'Settings',icon:'⚙️',roles:['site_admin']},
@@ -516,8 +522,12 @@ function openBatchModal(key){
   const all = getAllBatches();
   const batch = all.find(b=>b.key===key);
   if(!batch)return;
-  const isUser = hasRole(ROLE.USER)||hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN);
-  const isVerifier = hasRole(ROLE.VERIFIER)||hasRole(ROLE.SITE_ADMIN);
+  const isSiteAdmin = hasRole(ROLE.SITE_ADMIN);
+  const isProcAdmin = hasRole(ROLE.PROCESS_ADMIN);
+  const isUser = hasRole(ROLE.USER);
+  const isVerifier = hasRole(ROLE.VERIFIER);
+  const canVerify = isSiteAdmin || isProcAdmin || isVerifier;
+  const canSubmit = isUser;
   const receiptKey = batch.receiptKey;
   const receiptData = DB.batchReceipts[receiptKey];
 
@@ -525,7 +535,7 @@ function openBatchModal(key){
 
   const chequeTable = batch.cheques.map((c,i)=>`
     <tr>
-      ${isUser&&batch.status!=='closed'&&batch.status!=='verified'?
+      ${canSubmit&&(c.status==='pending'||c.status==='in_progress')?
         `<td><input type="checkbox" class="chk-cheque" data-id="${c.id}" ${c.status!=='pending'?'checked':''}></td>`:''}
       <td>${i+1}</td>
       <td>${esc(c.chequeNo||'—')}</td>
@@ -539,9 +549,14 @@ function openBatchModal(key){
     <div style="margin-bottom:12px;font-size:13px">
       <strong>${batch.count} cheques</strong> · Total ${fc(batch.total)} · Branch: ${esc(batch.branch)}
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      ${canSubmit&&(batch.status==='pending'||batch.status==='in_progress')?
+        `<button class="btn btn-primary btn-xs" onclick="document.querySelectorAll('.chk-cheque').forEach(c=>c.checked=true)">☑ Select All</button>
+         <button class="btn btn-secondary btn-xs" onclick="document.querySelectorAll('.chk-cheque').forEach(c=>c.checked=false)">☐ Clear All</button>`:''}
+    </div>
     <div class="table-wrap" style="margin-bottom:14px;max-height:300px">
       <table><thead><tr>
-        ${isUser&&batch.status!=='closed'&&batch.status!=='verified'?'<th style="width:30px"></th>':''}
+        ${canSubmit&&(batch.status==='pending'||batch.status==='in_progress')?'<th style="width:30px"></th>':''}
         <th>#</th><th>Cheque No</th><th>Amount</th><th>Type</th><th>Status</th>
         ${batch.cheques.some(c=>c.rejectReason)?'<th>Reason</th>':''}
       </tr></thead><tbody>${chequeTable}</tbody></table>
@@ -552,14 +567,17 @@ function openBatchModal(key){
   html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
     <h4 style="font-size:13px;margin-bottom:8px">📎 Batch Receipt</h4>${receiptHtml}`;
   
-  if(isUser && batch.status!=='closed' && batch.status!=='verified'){
-    html += `<label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-flex">
-      📁 Upload Receipt for This Batch
+  if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
+    const hasReceipt = !!receiptData;
+    html += `<label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-flex;${hasReceipt?'border-color:var(--green)':''}">
+      ${hasReceipt?'✅ Receipt Uploaded':'📁 Upload Receipt'}
       <input type="file" accept="image/*,.pdf" style="display:none" onchange="uploadBatchReceipt(event,'${receiptKey}')">
     </label>
-    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${receiptData?'Re-upload to replace':'Upload bank-in slip or return proof for the entire batch'}</div>`;
+    <div style="font-size:11px;color:${hasReceipt?'var(--green)':'var(--text-muted)'};margin-top:4px">
+      ${hasReceipt?'Receipt ready for submission':'* Receipt required before submitting'}
+    </div>`;
   }
-  if(receiptData) html += `<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="removeBatchReceipt('${receiptKey}')">🗑 Remove</button>`;
+  if(receiptData && (canSubmit||canVerify)) html += `<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="removeBatchReceipt('${receiptKey}')">🗑 Remove</button>`;
   html += `</div>`;
 
   // Notes
@@ -570,12 +588,12 @@ function openBatchModal(key){
 
   // Footer buttons
   let footerHtml = `<button class="btn btn-secondary" onclick="closeBatchModal()">Close</button>`;
-  if(isUser && batch.status!=='closed' && batch.status!=='verified'){
-    footerHtml += `<button class="btn btn-primary" onclick="submitBatch('${key}')">✅ Submit Batch</button>`;
+  if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
+    footerHtml += `<button class="btn btn-primary" onclick="submitBatch('${key}')">✅ Submit Selected</button>`;
   }
-  if(isVerifier && batch.status==='awaiting_verification'){
-    footerHtml += `<button class="btn btn-success" onclick="verifyBatch('${key}','verified')">✅ Confirm</button>`;
-    footerHtml += `<button class="btn btn-danger" onclick="verifyBatch('${key}','in_progress')">❌ Reject</button>`;
+  if(canVerify && batch.status==='awaiting_verification'){
+    footerHtml += `<button class="btn btn-success" onclick="verifyBatch('${key}','verified')">✅ Confirm All</button>`;
+    footerHtml += `<button class="btn btn-danger" onclick="verifyBatch('${key}','in_progress')">❌ Reject All</button>`;
   }
   document.getElementById('modalFooter').innerHTML = footerHtml;
   document.getElementById('batchModal').classList.add('open');
@@ -590,7 +608,7 @@ function uploadBatchReceipt(e,key){
     DB.batchReceipts[key]={data:ev.target.result,fileName:file.name,uploadedAt:new Date().toISOString(),uploadedBy:CURRENT_USER.username};
     saveDB();
     openBatchModal(currentBatchKey);
-    toast('Receipt uploaded for batch','success');
+    toast('Receipt uploaded','success');
   };
   reader.readAsDataURL(file);
 }
@@ -601,14 +619,20 @@ function removeBatchReceipt(key){
 }
 
 function submitBatch(key){
+  // Require receipt
+  const receiptKey = key.split('|').join('_');
+  if(!DB.batchReceipts[receiptKey]){
+    toast('Upload a receipt before submitting','error');
+    return;
+  }
   // Get checked cheque IDs
   const checked = [...document.querySelectorAll('.chk-cheque:checked')].map(el=>el.dataset.id);
-  if(checked.length===0){toast('Check at least one cheque','error');return;}
+  if(checked.length===0){toast('Check at least one cheque to submit','error');return;}
   const notes = document.getElementById('batchNotes')?.value||'';
-  // Update all selected cheques
+  const now = new Date().toISOString();
+  // Update selected cheques
   DB.cheques.forEach(c=>{
-    if(checked.includes(c.id)){c.status='awaiting_verification';c.notes=notes||c.notes;c.updatedAt=new Date().toISOString();}
-    else if(c.terminal+ '|' +c.batch===key && c.status==='pending'){/* leave unchecked ones as pending */}
+    if(checked.includes(c.id)){c.status='awaiting_verification';c.notes=notes||c.notes;c.updatedAt=now;}
   });
   saveDB();
   closeBatchModal();
@@ -719,7 +743,7 @@ function renderUsers(){
   if(!hasRole(ROLE.SITE_ADMIN)){document.getElementById('usersTableWrap').innerHTML='';return;}
   let html=`<div style="margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="showAddUser()">+ Add User</button></div>`;
   html+=`<table class="table-wrap" style="border:none;background:transparent"><table><thead><tr>
-    <th>Username</th><th>Name</th><th>Email</th><th>Roles</th><th>Location</th><th>Actions</th>
+    <th>Username</th><th>Name</th><th>Email</th><th>Roles</th><th>Branch</th><th>Actions</th>
   </tr></thead><tbody>`;
   DB.users.forEach(u=>{
     const roleChk=['site_admin','process_admin','user','verifier']
@@ -743,7 +767,7 @@ function showAddUser(){
       <div><label style="font-size:11px;color:var(--text-muted)">Password *</label><input id="nuPass" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Name</label><input id="nuName" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Email</label><input id="nuEmail" type="email" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;color:var(--text-muted)">Location</label>
+      <div><label style="font-size:11px;color:var(--text-muted)">Branch</label>
         <select id="nuLoc" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"><option value="">—</option>${locs.map(l=>`<option value="${l}">${l}</option>`).join('')}</select></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Roles</label>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
@@ -784,7 +808,7 @@ function editUser(id){
       <div><label style="font-size:11px;color:var(--text-muted)">New Password</label><input id="euPass" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none" placeholder="Leave blank"></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Name</label><input id="euName" value="${esc(u.name)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Email</label><input id="euEmail" type="email" value="${esc(u.email)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
-      <div><label style="font-size:11px;color:var(--text-muted)">Location</label>
+      <div><label style="font-size:11px;color:var(--text-muted)">Branch</label>
         <select id="euLoc" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"><option value="">—</option>${locs.map(l=>`<option value="${l}" ${u.location===l?'selected':''}>${l}</option>`).join('')}</select></div>
       <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--text-muted)">Roles</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
@@ -1007,6 +1031,14 @@ function clearImport(){document.getElementById('importContent').style.display='n
    MODULE 12 — INIT
    ════════════════════════════════════════════════════════════ */
 loadDB();
+// Auto-login from session
+try{
+  const saved = JSON.parse(sessionStorage.getItem('chequeUser'));
+  if(saved && saved.username){
+    const user = getUser(saved.username);
+    if(user){CURRENT_USER=user;enterApp();}
+  }
+}catch(e){}
 </script>
 </body>
 </html>

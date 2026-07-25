@@ -348,11 +348,13 @@ function loadDB(){
       });
       // Ensure location field exists on users
       DB.users.forEach(u => { if(u.location===undefined) u.location = ''; });
+      // Ensure branches array exists
+      if(!DB.branches) DB.branches = [];
       saveDB();
       return true;
     }
   }catch(e){}
-  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, nextUserId:1};
+  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, branches:[], nextUserId:1};
   DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
   DB.nextUserId=2;
   saveDB();
@@ -860,45 +862,83 @@ function deleteUser(id){if(!confirm('Delete?'))return;DB.users=DB.users.filter(u
    ════════════════════════════════════════════════════════════ */
 function renderSettings(){
   const terminals=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
-  const branches=[...new Set(Object.values(DB.branchMap))].sort();
+  const branchNames = DB.branches || [];
   let html=`<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
     <input id="newBranchName" placeholder="New branch name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1">
     <button class="btn btn-sm btn-primary" onclick="createBranch()">+ Add Branch</button>
   </div>`;
   
-  // Branch list with terminals
+  // Show existing branches as cards
+  if(branchNames.length > 0){
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">`;
+    branchNames.forEach(b=>{
+      const count = Object.values(DB.branchMap).filter(v=>v===b).length;
+      html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:8px">
+        <span>🏢 ${esc(b)}</span>
+        <span style="font-size:11px;color:var(--text-muted)">${count} terminals</span>
+        <button class="btn btn-danger btn-xs" onclick="deleteBranch('${b}')">✕</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  
+  // Terminals grouped by branch
   const grouped={};
   terminals.forEach(t=>{
-    const b=DB.branchMap[t]||'Unassigned';
+    const b=DB.branchMap[t];
     if(!grouped[b])grouped[b]=[];
     grouped[b].push(t);
   });
   
-  Object.keys(grouped).sort().forEach(b=>{
+  // Show unassigned terminals
+  const unassigned = terminals.filter(t=>!DB.branchMap[t]);
+  if(unassigned.length > 0){
     html+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
-      <div style="background:var(--surface2);padding:8px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
-        <span>${esc(b)}</span>
-        ${b!=='Unassigned'?`<button class="btn btn-danger btn-xs" onclick="deleteBranch('${b}')">🗑</button>`:''}
-      </div>
+      <div style="background:var(--surface2);padding:8px 12px;font-size:13px;font-weight:600">📌 Unassigned Terminals (${unassigned.length})</div>
       <div style="padding:6px 12px">`;
-    grouped[b].forEach(t=>{
+    unassigned.forEach(t=>{
       html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
         <span>${esc(t)}</span>
         <select onchange="moveTerminal('${t}',this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;outline:none">
-          <option value="">—</option>
-          ${[...new Set([...Object.values(DB.branchMap),'Unassigned'])].sort().map(x=>`<option value="${x}" ${x===b?'selected':''}>${esc(x)}</option>`).join('')}
+          <option value="">— Assign to branch —</option>
+          ${branchNames.map(x=>`<option value="${x}">${esc(x)}</option>`).join('')}
         </select>
       </div>`;
     });
     html+=`</div></div>`;
+  }
+  
+  // Assigned terminals by branch
+  branchNames.forEach(b=>{
+    const terms = terminals.filter(t=>DB.branchMap[t]===b);
+    if(terms.length===0) return;
+    html+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
+      <div style="background:var(--surface2);padding:8px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
+        <span>🏢 ${esc(b)} (${terms.length})</span>
+        <button class="btn btn-danger btn-xs" onclick="deleteBranch('${b}')">🗑</button>
+      </div>
+      <div style="padding:6px 12px">`;
+    terms.forEach(t=>{
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
+        <span>${esc(t)}</span>
+        </div>`;
+    });
+    html+=`</div></div>`;
   });
+  
   document.getElementById('branchConfig').innerHTML=html;
 }
 
 function createBranch(){
   const name=document.getElementById('newBranchName').value.trim();
   if(!name||name==='Unassigned'){toast('Enter a branch name','error');return;}
-  saveDB();renderSettings();document.getElementById('newBranchName').value='';
+  if(!DB.branches) DB.branches = [];
+  if(DB.branches.includes(name)){toast('Branch already exists','error');return;}
+  DB.branches.push(name);
+  DB.branches.sort();
+  saveDB();
+  renderSettings();
+  document.getElementById('newBranchName').value='';
   toast(`Branch "${name}" created`,'success');
 }
 
@@ -909,7 +949,9 @@ function moveTerminal(terminal,newBranch){
 }
 
 function deleteBranch(name){
-  if(!confirm(`Delete branch "${name}"? Terminals will become Unassigned.`))return;
+  if(!DB.branches) DB.branches = [];
+  if(!confirm(`Delete branch "${name}"? Terminals will become unassigned.`))return;
+  DB.branches = DB.branches.filter(b=>b!==name);
   Object.keys(DB.branchMap).forEach(t=>{if(DB.branchMap[t]===name)delete DB.branchMap[t];});
   saveDB();renderSettings();renderDashboard();
 }

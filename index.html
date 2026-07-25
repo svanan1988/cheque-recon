@@ -294,6 +294,10 @@ input,select,textarea,button{font:inherit;color:inherit}
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Map terminal codes to branch names. Drivers will filter by branch.</p>
         <div id="branchConfig"></div>
         <button class="btn btn-primary btn-sm" onclick="saveBranchConfig()" style="margin-top:10px">💾 Save Branch Config</button>
+        <hr style="border-color:var(--border);margin:24px 0">
+        <h3 style="font-size:15px;margin-bottom:8px;color:var(--red)">⚠️ Danger Zone</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Clear all cheques, batches, receipts, and branch data. Users and settings will be preserved.</p>
+        <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Cheque Data</button>
       </div>
     </div>
   </div>
@@ -330,10 +334,26 @@ let DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, nextUserId:1};
 function loadDB(){
   try{
     const raw = localStorage.getItem('chequeReconDB');
-    if(raw){DB = JSON.parse(raw); return true}
+    if(raw){
+      DB = JSON.parse(raw);
+      // Migrate old admin to site_admin
+      DB.users.forEach(u=>{
+        if(u.roles.includes('process_admin') && !u.roles.includes('site_admin') && u.username==='admin'){
+          u.roles = ['site_admin', 'process_admin', 'verifier'];
+        }
+        // Ensure process_admin can also verify
+        if(u.roles.includes('process_admin') && !u.roles.includes('verifier')){
+          u.roles.push('verifier');
+        }
+      });
+      // Ensure location field exists on users
+      DB.users.forEach(u => { if(u.location===undefined) u.location = ''; });
+      saveDB();
+      return true;
+    }
   }catch(e){}
   DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, nextUserId:1};
-  DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:[ROLE.SITE_ADMIN],createdAt:new Date().toISOString()});
+  DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
   DB.nextUserId=2;
   saveDB();
   return false;
@@ -895,6 +915,17 @@ function deleteBranch(name){
 }
 
 function saveBranchConfig(){saveDB();toast('Branch config saved','success');}
+
+function clearAllData(){
+  if(!confirm('Delete ALL cheque data, batches, and receipts? Users and settings will NOT be affected.'))return;
+  if(!confirm('Are you sure? This cannot be undone.'))return;
+  DB.cheques = [];
+  DB.batchReceipts = {};
+  DB.branchMap = {};
+  saveDB();
+  renderDashboard();renderSettings();
+  toast('All cheque data cleared','info');
+}
 
 /* ════════════════════════════════════════════════════════════
    MODULE 11 — PDF IMPORT

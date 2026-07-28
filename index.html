@@ -33,51 +33,34 @@ input,select,textarea,button{font:inherit;color:inherit}
    LAYOUT (sidebar + main)
    ════════════════════════════════════════════════ */
 /* ════════════════════════════════════════════════
-   SIDEBAR — collapsible (icons only, expand on hover/click)
+   SIDEBAR — static (always visible)
    ════════════════════════════════════════════════ */
 .app-layout{display:none;min-height:100vh}
 .app-layout.open{display:flex}
 
-.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;transition:width .25s ease}
-.sidebar.collapsed{width:60px;overflow:hidden}
-.sidebar.collapsed:hover{overflow-y:auto}
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
 
-.sidebar-brand{padding:16px 10px;border-bottom:1px solid var(--border);font-size:0;white-space:nowrap;display:flex;align-items:center;gap:8px;min-height:52px}
-.sidebar-brand .brand-icon{font-size:18px;width:40px;text-align:center;flex-shrink:0}
+.sidebar-brand{padding:16px 14px;border-bottom:1px solid var(--border);white-space:nowrap;display:flex;align-items:center;gap:8px;min-height:52px}
+.sidebar-brand .brand-icon{font-size:18px;width:36px;text-align:center;flex-shrink:0}
 .sidebar-brand .brand-text{font-size:14px;font-weight:700}
-.sidebar.collapsed .sidebar-brand .brand-text{opacity:0;pointer-events:none}
-.sidebar.collapsed .sidebar-toggle{opacity:0.7}
-.sidebar.collapsed .sidebar-toggle:hover{opacity:1}
-
-.sidebar-toggle{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:6px;font-size:14px;transition:.2s}
-.sidebar-toggle:hover{background:var(--surface2);color:var(--text)}
 
 .sidebar-nav{flex:1;padding:6px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:0;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left;white-space:nowrap}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left}
 .nav-item:hover{background:var(--surface2);color:var(--text)}
 .nav-item.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.3)}
-.nav-item .icon{font-size:16px;width:36px;text-align:center;flex-shrink:0}
+.nav-item .icon{font-size:16px;width:28px;text-align:center;flex-shrink:0}
 .nav-item .label{font-size:13px}
-.sidebar.collapsed .nav-item .label{opacity:0;pointer-events:none}
-.sidebar.collapsed .nav-item{font-size:0}
-.sidebar.collapsed .sidebar-footer .user-name,.sidebar.collapsed .sidebar-footer .role-badge,.sidebar.collapsed .sidebar-footer .logout-btn{opacity:0;pointer-events:none;font-size:0}
-.sidebar.collapsed .nav-sep{opacity:0!important;pointer-events:none}
+.nav-sep{font-size:10px;color:var(--text-muted);padding:8px 14px 2px;text-align:center;letter-spacing:.5px}
 
-.sidebar-footer{padding:10px 12px;border-top:1px solid var(--border);font-size:12px}
-.sidebar.collapsed .sidebar-footer{font-size:0}
+.sidebar-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:12px}
 .sidebar-footer .user-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;min-height:28px}
-.sidebar-footer .user-row .user-avatar{font-size:14px;width:36px;text-align:center;flex-shrink:0}
-.sidebar-footer .user-row .user-name{font-size:12px;opacity:0;transition:opacity .2s ease .1s;overflow:hidden;text-overflow:ellipsis}
-.sidebar:hover .user-name,.sidebar.expanded .user-name{opacity:1}
-.sidebar-footer .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;opacity:0;transition:opacity .2s ease .1s}
-.sidebar:hover .role-badge,.sidebar.expanded .role-badge{opacity:1}
-.sidebar-footer .logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;padding:4px 10px;border-radius:6px;font-size:0;transition:.2s;width:100%;margin-top:4px}
-.sidebar:hover .logout-btn,.sidebar.expanded .logout-btn{font-size:11px}
+.sidebar-footer .user-row .user-avatar{font-size:14px;width:28px;text-align:center;flex-shrink:0}
+.sidebar-footer .user-row .user-name{font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.sidebar-footer .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.sidebar-footer .logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;transition:.2s;width:100%;margin-top:4px}
 .sidebar-footer .logout-btn:hover{border-color:var(--red);color:var(--red)}
 
-.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .25s ease}
-.sidebar.collapsed ~ .main-area{margin-left:60px}
-.sidebar.collapsed ~ .main-area .header-bar{padding-left:28px}
+.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
 .header-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
 .header-bar h2{font-size:16px;font-weight:600}
 .header-bar h2 .sub{font-size:12px;color:var(--text-muted);font-weight:400}
@@ -88,6 +71,9 @@ input,select,textarea,button{font:inherit;color:inherit}
 /* ════════════════════════════════════════════════
    COMPONENTS
    ════════════════════════════════════════════════ */
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);transition:.15s;user-select:none}
+.status-pill.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 1px 4px rgba(220,38,38,.3)}
+.status-pill:hover{border-color:var(--accent)}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:13px;transition:.2s;justify-content:center}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-primary:hover{background:var(--accent-hover);box-shadow:0 2px 10px rgba(220,38,38,.3)}
@@ -163,11 +149,8 @@ input,select,textarea,button{font:inherit;color:inherit}
 @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 
 @media(max-width:768px){
-:root{--sidebar-w:180px}
-.sidebar{width:180px}
-.sidebar.collapsed{width:0;overflow:hidden;border-right:none}
-.sidebar.collapsed ~ .main-area{margin-left:0}
-.main-area{margin-left:180px}
+.sidebar{width:200px}
+.main-area{margin-left:200px}
 .page{padding:12px 16px}
 .batch-grid{grid-template-columns:1fr}
 .stats{grid-template-columns:repeat(2,1fr)}
@@ -199,7 +182,6 @@ input,select,textarea,button{font:inherit;color:inherit}
     <div class="sidebar-brand">
       <span class="brand-icon">📋</span>
       <span class="brand-text"><span style="color:#EF4444;font-weight:900">CHEQUE</span><span style="color:var(--text)">Sense</span></span>
-      <button class="sidebar-toggle" onclick="toggleSidebar()">◀</button>
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
     <div class="sidebar-footer">
@@ -264,11 +246,13 @@ input,select,textarea,button{font:inherit;color:inherit}
     <div class="page" id="page-batches">
       <div class="filter-bar">
         <input type="text" class="search" placeholder="Search batch, location..." id="batchSearch" oninput="renderBatches()">
-        <select id="batchStatusFilter" onchange="renderBatches()">
-          <option value="all">All Status</option>
-          <option value="pending"> Pending</option><option value="in_progress"> In Progress</option>
-          <option value="awaiting_verification"> Awaiting Verify</option><option value="verified"> Verified</option><option value="closed"> Closed</option>
-        </select>
+        <div id="statusPills" style="display:flex;gap:4px;flex-wrap:wrap">
+          <span class="status-pill active" data-s="pending" onclick="toggleStatusPill(this)"> Pending</span>
+          <span class="status-pill active" data-s="in_progress" onclick="toggleStatusPill(this)"> In Progress</span>
+          <span class="status-pill active" data-s="awaiting_verification" onclick="toggleStatusPill(this)"> Awaiting</span>
+          <span class="status-pill active" data-s="verified" onclick="toggleStatusPill(this)"> Verified</span>
+          <span class="status-pill" data-s="closed" onclick="toggleStatusPill(this)"> Closed</span>
+        </div>
         <select id="branchFilter2" onchange="renderBatches()"><option value="all">All Branches</option></select>
         <input type="date" id="reconDateFrom" onchange="renderBatches()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
         <input type="date" id="reconDateTo" onchange="renderBatches()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
@@ -492,22 +476,11 @@ function buildSidebar(){
     btn.onclick=()=>switchPage(item.id);
     nav.appendChild(btn);
   });
-  // Make separators visible on hover/expand
-  const style=document.createElement('style');
-  style.textContent='.nav-sep{opacity:0;transition:opacity .2s ease .1s}.sidebar:hover .nav-sep,.sidebar.expanded .nav-sep{opacity:1!important}';
-  document.head.appendChild(style);
   const rl=ROLE_LABELS;
   document.getElementById('sideUserName').textContent=CURRENT_USER.name||CURRENT_USER.username;
   const rolesText=CURRENT_USER.roles.map(r=>rl[r]||r).join(', ');
   const badge=document.getElementById('sideRoleBadge');badge.textContent=rolesText;
   const cls=CURRENT_USER.roles[0]||'user';badge.className='role-badge '+cls;
-}
-
-let sidebarCollapsed = false;
-function toggleSidebar(){
-  sidebarCollapsed = !sidebarCollapsed;
-  document.querySelector('.sidebar').classList.toggle('collapsed', sidebarCollapsed);
-  document.querySelector('.sidebar-toggle').textContent = sidebarCollapsed ? '☰' : '✕';
 }
 
 function switchPage(id){
@@ -576,10 +549,10 @@ function renderDashboard(){
   // Stats
   document.getElementById('statsBar').innerHTML=`
     <div class="stat-card"><div class="label">Total Batches</div><div class="value">${all.length}</div></div>
-    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='pending';renderBatches()"><div class="label">Pending</div><div class="value amber">${all.filter(b=>b.status==='pending').length}</div></div>
-    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='in_progress';renderBatches()"><div class="label">In Progress</div><div class="value blue">${all.filter(b=>b.status==='in_progress').length}</div></div>
-    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='awaiting_verification';renderBatches()"><div class="label">Awaiting Verify</div><div class="value green">${all.filter(b=>b.status==='awaiting_verification').length}</div></div>
-    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='closed';renderBatches()"><div class="label">Closed</div><div class="value">${all.filter(b=>b.status==='closed').length}</div></div>`;
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.querySelectorAll('#statusPills .status-pill').forEach(p=>p.classList.toggle('active',p.dataset.s==='pending'));renderBatches()"><div class="label">Pending</div><div class="value amber">${all.filter(b=>b.status==='pending').length}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.querySelectorAll('#statusPills .status-pill').forEach(p=>p.classList.toggle('active',p.dataset.s==='in_progress'));renderBatches()"><div class="label">In Progress</div><div class="value blue">${all.filter(b=>b.status==='in_progress').length}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.querySelectorAll('#statusPills .status-pill').forEach(p=>p.classList.toggle('active',p.dataset.s==='awaiting_verification'));renderBatches()"><div class="label">Awaiting Verify</div><div class="value green">${all.filter(b=>b.status==='awaiting_verification').length}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.querySelectorAll('#statusPills .status-pill').forEach(p=>p.classList.toggle('active',p.dataset.s==='closed'));renderBatches()"><div class="label">Closed</div><div class="value">${all.filter(b=>b.status==='closed').length}</div></div>`;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -754,6 +727,11 @@ function verifyBatch(key,status){
 /* ════════════════════════════════════════════════════════════
    MODULE 6 — BATCHES PAGE (driver view)
    ════════════════════════════════════════════════════════════ */
+function toggleStatusPill(el){
+  el.classList.toggle('active');
+  renderBatches();
+}
+
 function renderBatches(){
   let batches=getAllBatches();
   if(!hasRole(ROLE.SITE_ADMIN)&&!hasRole(ROLE.PROCESS_ADMIN)){
@@ -768,11 +746,12 @@ function renderBatches(){
       return true;
     });
   }
+  // Multi-status filter from pills
+  const activePills=[...document.querySelectorAll('#statusPills .status-pill.active')].map(el=>el.dataset.s);
+  if(activePills.length>0)batches=batches.filter(b=>activePills.includes(b.status));
   const search=(document.getElementById('batchSearch')?.value||'').toLowerCase();
-  const sf=document.getElementById('batchStatusFilter')?.value||'all';
   const bf=document.getElementById('branchFilter2')?.value||'all';
   batches=batches.filter(b=>{
-    if(sf!=='all'&&b.status!==sf)return false;
     if(bf!=='all'&&b.branch!==bf)return false;
     if(search&&![b.terminal,b.batch,b.branch].some(x=>x.toLowerCase().includes(search)))return false;
     return true;
@@ -785,23 +764,23 @@ function renderBatches(){
     bSel.innerHTML='<option value="all">All Branches</option>'+branches.map(x=>`<option value="${x}">${x}</option>`).join('');
     bSel.value=bv;
   }
-  const card = b=>`<div class="batch-card" onclick="openBatchModal('${b.key}')">
-    <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)} · ${esc(b.date)}</div></div>
-      <div class="total-amt">${fc(b.total)}</div></div>
-    <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span><span>${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</span></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-      <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
-      ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt</span>':''}
-      ${b.cheques.some(c=>c.status==='pending')?'<span style="font-size:10px;color:var(--amber)">⏳ '+b.cheques.filter(c=>c.status==='pending').length+' pending</span>':''}
-    </div>
-  </div>`;
   const grid=document.getElementById('batchGrid2');
-  const bankin=batches.filter(b=>b.type==='bankin'),rejected=batches.filter(b=>b.type==='rejected');
   if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No batches found</h3></div>`;return;}
-  let h='';
-  if(bankin.length>0)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent)">🏦 Bank-In (${bankin.length})</div><div class="batch-grid" style="margin-bottom:20px">${bankin.sort((a,b)=>a.status.localeCompare(b.status)).map(card).join('')}</div>`;
-  if(rejected.length>0)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--red)">🔴 Return / Rejected (${rejected.length})</div><div class="batch-grid">${rejected.sort((a,b)=>a.status.localeCompare(b.status)).map(card).join('')}</div>`;
-  grid.innerHTML=h;
+  grid.innerHTML=`<div class="batch-grid">${batches.sort((a,b)=>a.status.localeCompare(b.status)).map(b=>`
+    <div class="batch-card" onclick="openBatchModal('${b.key}')">
+      <div class="top">
+        <div>
+          <div class="location">${esc(b.terminal)}</div>
+          <div class="batch-no">${esc(b.batch)} · ${b.date}</div>
+        </div>
+        <div class="total-amt">${fc(b.total)}</div>
+      </div>
+      <div style="display:flex;gap:6px;margin:6px 0 8px;flex-wrap:wrap">
+        <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:${b.type==='rejected'?'var(--red-bg)':'var(--surface2)'};color:${b.type==='rejected'?'var(--red)':'var(--text-muted)'};font-weight:600">${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</span>
+      </div>
+      <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span>${b.hasReceipt?'<span>📎 Receipt</span>':''}</div>
+    </div>`).join('')}</div>`;
 }
 
 /* ════════════════════════════════════════════════════════════

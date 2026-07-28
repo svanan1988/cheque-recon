@@ -204,7 +204,8 @@ input,select,textarea,button{font:inherit;color:inherit}
         <span class="user-name" id="sideUserName"></span>
       </div>
       <span class="role-badge" id="sideRoleBadge"></span>
-      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+      <button class="btn btn-danger btn-xs" onclick="doLogout()" style="width:100%;margin-top:6px">🚪 Sign Out</button>
+      <button class="btn btn-secondary btn-xs" onclick="showChangePassword()" style="width:100%;margin-top:4px">🔑 Change Password</button>
     </div>
   </aside>
 
@@ -289,14 +290,47 @@ input,select,textarea,button{font:inherit;color:inherit}
 
     <!-- SETTINGS -->
     <div class="page" id="page-settings">
-      <div style="max-width:600px">
-        <h3 style="font-size:15px;margin-bottom:12px">🏢 Branch Configuration</h3>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Map terminal codes to branch names. Drivers will filter by branch.</p>
-        <div id="branchConfig"></div>
-        <button class="btn btn-primary btn-sm" onclick="saveBranchConfig()" style="margin-top:10px">💾 Save Branch Config</button>
-        <hr style="border-color:var(--border);margin:24px 0">
+      <div style="max-width:660px">
+
+        <!-- CUSTOMERS -->
+        <h3 style="font-size:15px;margin-bottom:10px">🏭 Customers</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Create customers and tag to terminals.</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <input id="newCustomerInput" placeholder="Customer name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)">
+          <button class="btn btn-sm btn-primary" onclick="createCustomer()">+ Add Customer</button>
+        </div>
+        <div id="customerList" style="margin-bottom:20px"></div>
+        <hr style="border-color:var(--border);margin:20px 0">
+
+        <!-- BRANCHES -->
+        <h3 style="font-size:15px;margin-bottom:10px">🏢 Branch Configuration</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Map terminal codes to branch names.</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <input id="newBranchName" placeholder="Branch name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)">
+          <button class="btn btn-sm btn-primary" onclick="createBranch()">+ Add Branch</button>
+        </div>
+        <div id="branchConfig" style="margin-bottom:20px"></div>
+        <hr style="border-color:var(--border);margin:20px 0">
+
+        <!-- BATCH IMPORT -->
+        <h3 style="font-size:15px;margin-bottom:10px">📋 Batch Terminal Mapping</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Paste one mapping per line: <code>TERMINAL=BRANCH</code> or <code>TERMINAL=CUSTOMER</code></p>
+        <textarea id="batchImportInput" placeholder="ASTR01=Klang Valley&#10;BCHK01=Northern&#10;CPCC01=TNB" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;outline:none;color:var(--text);font-family:monospace;height:120px;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-primary" onclick="batchImportBranches()">🏢 Import Branches</button>
+          <button class="btn btn-sm btn-primary" onclick="batchImportCustomers()">🏭 Import Customers</button>
+          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('batchImportInput').value=''">Clear</button>
+        </div>
+        <hr style="border-color:var(--border);margin:20px 0">
+
+        <!-- TERMINAL ASSIGNMENTS -->
+        <h3 style="font-size:15px;margin-bottom:10px">📍 Terminal Assignments</h3>
+        <div id="terminalAssignments"></div>
+        <hr style="border-color:var(--border);margin:20px 0">
+
+        <!-- DANGER ZONE -->
         <h3 style="font-size:15px;margin-bottom:8px;color:var(--red)">⚠️ Danger Zone</h3>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Clear all cheques, batches, receipts, and branch data. Users and settings will be preserved.</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Clear all cheques, batches, receipts. Users, branches, and customers preserved.</p>
         <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Cheque Data</button>
       </div>
     </div>
@@ -350,11 +384,14 @@ function loadDB(){
       DB.users.forEach(u => { if(u.location===undefined) u.location = ''; });
       // Ensure branches array exists
       if(!DB.branches) DB.branches = [];
+      // Ensure customers exist
+      if(!DB.customers) DB.customers = [];
+      if(!DB.customerMap) DB.customerMap = {};
       saveDB();
       return true;
     }
   }catch(e){}
-  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, branches:[], nextUserId:1};
+  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, branches:[], customers:[], customerMap:{}, nextUserId:1};
   DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
   DB.nextUserId=2;
   saveDB();
@@ -549,7 +586,7 @@ function openBatchModal(key){
   const isUser = hasRole(ROLE.USER);
   const isVerifier = hasRole(ROLE.VERIFIER);
   const canVerify = isSiteAdmin || isProcAdmin || isVerifier;
-  const canSubmit = isUser;
+  const canSubmit = isUser || isSiteAdmin || isProcAdmin;
   const receiptKey = batch.receiptKey;
   const receiptData = DB.batchReceipts[receiptKey];
 
@@ -591,10 +628,10 @@ function openBatchModal(key){
   
   if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
     const hasReceipt = !!receiptData;
-    html += `<label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-flex;${hasReceipt?'border-color:var(--green)':''}">
+    html += `<button class="btn btn-sm ${hasReceipt?'btn-success':'btn-secondary'}" onclick="triggerReceiptUpload('${receiptKey}')" style="cursor:pointer;${hasReceipt?'border-color:var(--green)':''}">
       ${hasReceipt?'✅ Receipt Uploaded':'📁 Upload Receipt'}
-      <input type="file" accept="image/*,.pdf" style="display:none" onchange="uploadBatchReceipt(event,'${receiptKey}')">
-    </label>
+    </button>
+    <input type="file" id="receiptInput_${receiptKey}" accept="image/*,.pdf" style="display:none" onchange="uploadBatchReceipt(event,'${receiptKey}')">
     <div style="font-size:11px;color:${hasReceipt?'var(--green)':'var(--text-muted)'};margin-top:4px">
       ${hasReceipt?'Receipt ready for submission':'* Receipt required before submitting'}
     </div>`;
@@ -622,6 +659,11 @@ function openBatchModal(key){
 }
 
 function closeBatchModal(){document.getElementById('batchModal').classList.remove('open');currentBatchKey=null;}
+
+function triggerReceiptUpload(key){
+  const inp=document.getElementById('receiptInput_'+key);
+  if(inp)inp.click();
+}
 
 function uploadBatchReceipt(e,key){
   const file=e.target.files[0];if(!file)return;
@@ -825,9 +867,9 @@ function editUser(id){
   const locs=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
   document.getElementById('modalTitle').textContent=`✏️ Edit ${esc(u.username)}`;
   document.getElementById('modalBody').innerHTML=`
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Leave password blank to keep unchanged.</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Update fields. Password shown for admin reference.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div><label style="font-size:11px;color:var(--text-muted)">New Password</label><input id="euPass" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none" placeholder="Leave blank"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Password</label><input id="euPass" type="text" value="${esc(u.password)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Name</label><input id="euName" value="${esc(u.name)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Email</label><input id="euEmail" type="email" value="${esc(u.email)}" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
       <div><label style="font-size:11px;color:var(--text-muted)">Branch</label>
@@ -856,6 +898,35 @@ function saveEditUser(id){
 }
 
 function deleteUser(id){if(!confirm('Delete?'))return;DB.users=DB.users.filter(u=>u.id!==id);saveDB();renderUsers();}
+
+/* ════════════════════════════════════════════════
+   MODULE 9b — CHANGE PASSWORD
+   ════════════════════════════════════════════════ */
+function showChangePassword(){
+  if(!CURRENT_USER)return;
+  document.getElementById('modalTitle').textContent='🔑 Change Password';
+  document.getElementById('modalBody').innerHTML=`
+    <div style="display:grid;gap:10px;max-width:320px">
+      <div><label style="font-size:11px;color:var(--text-muted)">Current Password</label><input id="cpOld" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">New Password</label><input id="cpNew" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+      <div><label style="font-size:11px;color:var(--text-muted)">Confirm New Password</label><input id="cpConfirm" type="text" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none"></div>
+    </div>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="doChangePassword()">💾 Update Password</button>`;
+  document.getElementById('batchModal').classList.add('open');
+}
+function doChangePassword(){
+  const u=DB.users.find(x=>x.id===CURRENT_USER.id);if(!u)return;
+  const old=document.getElementById('cpOld')?.value?.trim();
+  const nw=document.getElementById('cpNew')?.value?.trim();
+  const cf=document.getElementById('cpConfirm')?.value?.trim();
+  if(u.password!==old){toast('Current password is incorrect','error');return;}
+  if(!nw||nw.length<4){toast('New password must be at least 4 characters','error');return;}
+  if(nw!==cf){toast('Passwords do not match','error');return;}
+  u.password=nw;
+  saveDB();closeBatchModal();toast('Password updated','success');
+}
 
 /* ════════════════════════════════════════════════════════════
    MODULE 10 — SETTINGS (Branch config)

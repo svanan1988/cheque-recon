@@ -45,7 +45,9 @@ input,select,textarea,button{font:inherit;color:inherit}
 .sidebar-brand{padding:16px 10px;border-bottom:1px solid var(--border);font-size:0;white-space:nowrap;display:flex;align-items:center;gap:8px;min-height:52px}
 .sidebar-brand .brand-icon{font-size:18px;width:40px;text-align:center;flex-shrink:0}
 .sidebar-brand .brand-text{font-size:14px;font-weight:700}
-.sidebar.collapsed .sidebar-brand .brand-text,.sidebar.collapsed .sidebar-toggle{opacity:0;pointer-events:none}
+.sidebar.collapsed .sidebar-brand .brand-text{opacity:0;pointer-events:none}
+.sidebar.collapsed .sidebar-toggle{opacity:0.7}
+.sidebar.collapsed .sidebar-toggle:hover{opacity:1}
 
 .sidebar-toggle{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:6px;font-size:14px;transition:.2s}
 .sidebar-toggle:hover{background:var(--surface2);color:var(--text)}
@@ -73,8 +75,9 @@ input,select,textarea,button{font:inherit;color:inherit}
 .sidebar:hover .logout-btn,.sidebar.expanded .logout-btn{font-size:11px}
 .sidebar-footer .logout-btn:hover{border-color:var(--red);color:var(--red)}
 
-.main-area{margin-left:60px;flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .25s ease}
-.sidebar:hover ~ .main-area,.sidebar.expanded ~ .main-area{margin-left:var(--sidebar-w)}
+.main-area{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .25s ease}
+.sidebar.collapsed ~ .main-area{margin-left:60px}
+.sidebar.collapsed ~ .main-area .header-bar{padding-left:28px}
 .header-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
 .header-bar h2{font-size:16px;font-weight:600}
 .header-bar h2 .sub{font-size:12px;color:var(--text-muted);font-weight:400}
@@ -160,11 +163,11 @@ input,select,textarea,button{font:inherit;color:inherit}
 @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 
 @media(max-width:768px){
-:root{--sidebar-w:60px}
-.sidebar{width:60px}
-.sidebar:hover,.sidebar.expanded{width:180px}
-.main-area{margin-left:60px}
-.sidebar:hover ~ .main-area,.sidebar.expanded ~ .main-area{margin-left:180px}
+:root{--sidebar-w:180px}
+.sidebar{width:180px}
+.sidebar.collapsed{width:0;overflow:hidden;border-right:none}
+.sidebar.collapsed ~ .main-area{margin-left:0}
+.main-area{margin-left:180px}
 .page{padding:12px 16px}
 .batch-grid{grid-template-columns:1fr}
 .stats{grid-template-columns:repeat(2,1fr)}
@@ -421,6 +424,8 @@ function getAllBatches(){
     g.status = batchStatus(g.cheques);
     g.receiptKey = g.terminal+'_'+g.batch;
     g.hasReceipt = !!DB.batchReceipts[g.receiptKey];
+    g.type = g.cheques.every(c=>c.jobType==='rejected') ? 'rejected' : 'bankin';
+    g.date = g.cheques[0]?.issueDate || g.cheques[0]?.createdAt?.split('T')[0] || '—';
     return g;
   });
 }
@@ -596,7 +601,7 @@ function openBatchModal(key){
   const receiptKey = batch.receiptKey;
   const receiptData = DB.batchReceipts[receiptKey];
 
-  document.getElementById('modalTitle').textContent = `📋 ${batch.terminal} · Batch ${batch.batch}`;
+  document.getElementById('modalTitle').textContent = `📋 ${batch.terminal} · Batch ${batch.batch} · ${batch.date}`;
 
   const chequeTable = batch.cheques.map((c,i)=>`
     <tr>
@@ -634,6 +639,16 @@ function openBatchModal(key){
   
   if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
     const hasReceipt = !!receiptData;
+    // Action selector
+    html += `<div style="margin-bottom:10px">
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Action</label>
+      <select id="batchAction" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:100%">
+        <option value="bankin">🏦 Bank In</option>
+        <option value="return">🔴 Return to Customer</option>
+        <option value="missing">❓ Missing</option>
+        <option value="others">📝 Others</option>
+      </select>
+    </div>`;
     html += `<button class="btn btn-sm ${hasReceipt?'btn-success':'btn-secondary'}" onclick="triggerReceiptUpload('${receiptKey}')" style="cursor:pointer;${hasReceipt?'border-color:var(--green)':''}">
       ${hasReceipt?'✅ Receipt Uploaded':'📁 Upload Receipt'}
     </button>
@@ -701,8 +716,18 @@ function submitBatch(key){
   const notes = document.getElementById('batchNotes')?.value||'';
   const now = new Date().toISOString();
   // Update selected cheques
+  const action = document.getElementById('batchAction')?.value||'bankin';
+  const actionLabels = {bankin:'Bank In',return:'Return to Customer',missing:'Missing',others:'Others'};
   DB.cheques.forEach(c=>{
-    if(checked.includes(c.id)){c.status='awaiting_verification';c.notes=notes||c.notes;c.updatedAt=now;}
+    if(checked.includes(c.id)){
+      c.status='awaiting_verification';
+      c.jobType = (action==='bankin') ? 'bankin' : 'rejected';
+      c.notes = notes||c.notes;
+      if(action==='return')c.rejectReason='Returned to customer';
+      else if(action==='missing')c.rejectReason='Cheque missing';
+      else if(action==='others')c.rejectReason=notes||'Others';
+      c.updatedAt=now;
+    }
   });
   saveDB();
   closeBatchModal();
@@ -734,7 +759,6 @@ function renderBatches(){
   if(!hasRole(ROLE.SITE_ADMIN)&&!hasRole(ROLE.PROCESS_ADMIN)){
     batches=batches.filter(b=>b.cheques.some(c=>c.assignedTo===CURRENT_USER.username));
   }
-  // Date filter
   const df=document.getElementById('reconDateFrom')?.value,dt=document.getElementById('reconDateTo')?.value;
   if(df||dt){
     batches=batches.filter(b=>{
@@ -753,19 +777,6 @@ function renderBatches(){
     if(search&&![b.terminal,b.batch,b.branch].some(x=>x.toLowerCase().includes(search)))return false;
     return true;
   });
-  const grid=document.getElementById('batchGrid2');
-  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No batches found</h3></div>`;return;}
-  grid.innerHTML=batches.sort((a,b)=>a.status.localeCompare(b.status)).map(b=>`
-    <div class="batch-card" onclick="openBatchModal('${b.key}')">
-      <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)}</div></div>
-        <div class="total-amt">${fc(b.total)}</div></div>
-      <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-        <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
-        ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt</span>':''}
-        ${b.cheques.some(c=>c.status==='pending')?'<span style="font-size:10px;color:var(--amber)">⏳ '+b.cheques.filter(c=>c.status==='pending').length+' pending</span>':''}
-      </div>
-    </div>`).join('');
   // Populate branch filter
   const bSel=document.getElementById('branchFilter2');
   if(bSel){
@@ -774,6 +785,23 @@ function renderBatches(){
     bSel.innerHTML='<option value="all">All Branches</option>'+branches.map(x=>`<option value="${x}">${x}</option>`).join('');
     bSel.value=bv;
   }
+  const card = b=>`<div class="batch-card" onclick="openBatchModal('${b.key}')">
+    <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)} · ${esc(b.date)}</div></div>
+      <div class="total-amt">${fc(b.total)}</div></div>
+    <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span><span>${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+      <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
+      ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt</span>':''}
+      ${b.cheques.some(c=>c.status==='pending')?'<span style="font-size:10px;color:var(--amber)">⏳ '+b.cheques.filter(c=>c.status==='pending').length+' pending</span>':''}
+    </div>
+  </div>`;
+  const grid=document.getElementById('batchGrid2');
+  const bankin=batches.filter(b=>b.type==='bankin'),rejected=batches.filter(b=>b.type==='rejected');
+  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No batches found</h3></div>`;return;}
+  let h='';
+  if(bankin.length>0)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent)">🏦 Bank-In (${bankin.length})</div><div class="batch-grid" style="margin-bottom:20px">${bankin.sort((a,b)=>a.status.localeCompare(b.status)).map(card).join('')}</div>`;
+  if(rejected.length>0)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--red)">🔴 Return / Rejected (${rejected.length})</div><div class="batch-grid">${rejected.sort((a,b)=>a.status.localeCompare(b.status)).map(card).join('')}</div>`;
+  grid.innerHTML=h;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -785,9 +813,9 @@ function renderVerify(){
   if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>Nothing to verify</h3></div>`;return;}
   grid.innerHTML=batches.map(b=>`
     <div class="batch-card" onclick="openBatchModal('${b.key}')">
-      <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)}</div></div>
+      <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)} · ${b.date}</div></div>
         <div class="total-amt">${fc(b.total)}</div></div>
-      <div class="meta"><span>📄 ${b.count} cheques</span><span>📎 ${b.hasReceipt?'Receipt uploaded':'No receipt'}</span></div>
+      <div class="meta"><span>📄 ${b.count} cheques</span><span>${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</span><span>📎 ${b.hasReceipt?'Receipt uploaded':'No receipt'}</span></div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-success btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','verified')">✅ Confirm</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','in_progress')">❌ Reject</button>
@@ -802,10 +830,10 @@ function renderHistory(){
   const wrap=document.getElementById('historyWrap');
   const closed=getAllBatches().filter(b=>b.status==='closed'||b.status==='verified');
   if(closed.length===0){wrap.innerHTML=`<div class="empty-state"><div class="icon">📭</div><h3>No completed batches</h3></div>`;return;}
-  let html=`<table><thead><tr><th>Location</th><th>Batch</th><th>Cheques</th><th>Total</th><th>Receipt</th><th>Verified By</th><th>Status</th></tr></thead><tbody>`;
+  let html=`<table><thead><tr><th>Location</th><th>Date</th><th>Batch</th><th>Type</th><th>Cheques</th><th>Total</th><th>Receipt</th><th>Verified By</th><th>Status</th></tr></thead><tbody>`;
   closed.sort((a,b)=>new Date(b.cheques[0]?.updatedAt)-new Date(a.cheques[0]?.updatedAt)).forEach(b=>{
     const v=b.cheques.find(c=>c.verifiedBy);
-    html+=`<tr><td><strong>${esc(b.terminal)}</strong></td><td>${esc(b.batch)}</td><td>${b.count}</td>
+    html+=`<tr><td><strong>${esc(b.terminal)}</strong></td><td style="font-size:11px">${b.date}</td><td>${esc(b.batch)}</td><td>${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</td><td>${b.count}</td>
       <td>${fc(b.total)}</td><td>${b.hasReceipt?'📎 Yes':'—'}</td>
       <td>${esc(v?.verifiedBy||'—')}</td>
       <td><span class="status-badge ${b.status}">${STATUS[b.status]||b.status}</span></td></tr>`;

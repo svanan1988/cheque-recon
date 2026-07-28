@@ -10,7 +10,7 @@
 /* ════════════════════════════════════════════════
    ROOT & RESET
    ════════════════════════════════════════════════ */
-:root{--bg:#0b0d14;--surface:#151820;--surface2:#1e2335;--border:#282d45;--text:#e2e4ea;--text-muted:#7a7f99;--accent:#6366f1;--accent-hover:#818cf8;--green:#22c55e;--green-bg:#0f291e;--amber:#f59e0b;--amber-bg:#221d12;--blue:#3b82f6;--blue-bg:#111d35;--red:#ef4444;--red-bg:#221515;--gray:#5a6072;--gray-bg:#181b28;--radius:10px;--shadow:0 2px 16px rgba(0,0,0,.4);--sidebar-w:220px}
+:root{--bg:#000000;--surface:#111111;--surface2:#1a1a1a;--border:#2a2a2a;--text:#ffffff;--text-muted:#9CA3AF;--accent:#DC2626;--accent-hover:#EF4444;--green:#22c55e;--green-bg:#0f291e;--amber:#f59e0b;--amber-bg:#221d12;--blue:#3b82f6;--blue-bg:#1a1a3a;--red:#DC2626;--red-bg:#2a0a0a;--gray:#6b7280;--gray-bg:#1f1f1f;--radius:10px;--shadow:0 2px 16px rgba(0,0,0,.6);--sidebar-w:220px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 input,select,textarea,button{font:inherit;color:inherit}
@@ -55,7 +55,7 @@ input,select,textarea,button{font:inherit;color:inherit}
 .sidebar-nav{flex:1;padding:6px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:0;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left;white-space:nowrap}
 .nav-item:hover{background:var(--surface2);color:var(--text)}
-.nav-item.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
+.nav-item.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.3)}
 .nav-item .icon{font-size:16px;width:36px;text-align:center;flex-shrink:0}
 .nav-item .label{font-size:13px;opacity:0;transition:opacity .2s ease .1s}
 .sidebar:hover .nav-item .label,.sidebar.expanded .nav-item .label{opacity:1}
@@ -86,7 +86,7 @@ input,select,textarea,button{font:inherit;color:inherit}
    ════════════════════════════════════════════════ */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:13px;transition:.2s;justify-content:center}
 .btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent-hover);box-shadow:0 2px 10px rgba(99,102,241,.3)}
+.btn-primary:hover{background:var(--accent-hover);box-shadow:0 2px 10px rgba(220,38,38,.3)}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn-secondary:hover{background:var(--border)}
 .btn-danger{background:var(--red-bg);color:var(--red)}
@@ -256,15 +256,16 @@ input,select,textarea,button{font:inherit;color:inherit}
       </div>
     </div>
 
-    <!-- BATCHES (for drivers) -->
+    <!-- RECONCILE CHEQUES -->
     <div class="page" id="page-batches">
       <div class="filter-bar">
-        <input type="text" class="search" placeholder="🔍 Search batch, location..." id="batchSearch" oninput="renderBatches()">
+        <input type="text" class="search" placeholder="Search batch, location..." id="batchSearch" oninput="renderBatches()">
         <select id="batchStatusFilter" onchange="renderBatches()">
           <option value="all">All Status</option>
-          <option value="pending">🟠 Pending</option><option value="in_progress">🔵 In Progress</option>
-          <option value="awaiting_verification">🟢 Awaiting Verify</option>
+          <option value="pending"> Pending</option><option value="in_progress"> In Progress</option>
+          <option value="awaiting_verification"> Awaiting Verify</option><option value="verified"> Verified</option><option value="closed"> Closed</option>
         </select>
+        <select id="branchFilter2" onchange="renderBatches()"><option value="all">All Branches</option></select>
       </div>
       <div class="batch-grid" id="batchGrid2"></div>
     </div>
@@ -288,51 +289,9 @@ input,select,textarea,button{font:inherit;color:inherit}
       <div class="table-wrap" id="usersTableWrap"></div>
     </div>
 
-    <!-- SETTINGS -->
+    <!-- SETTINGS (dynamic sub-tabs) -->
     <div class="page" id="page-settings">
-      <div style="max-width:660px">
-
-        <!-- CUSTOMERS -->
-        <h3 style="font-size:15px;margin-bottom:10px">🏭 Customers</h3>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Create customers and tag to terminals.</p>
-        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-          <input id="newCustomerInput" placeholder="Customer name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)">
-          <button class="btn btn-sm btn-primary" onclick="createCustomer()">+ Add Customer</button>
-        </div>
-        <div id="customerList" style="margin-bottom:20px"></div>
-        <hr style="border-color:var(--border);margin:20px 0">
-
-        <!-- BRANCHES -->
-        <h3 style="font-size:15px;margin-bottom:10px">🏢 Branch Configuration</h3>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Map terminal codes to branch names.</p>
-        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-          <input id="newBranchName" placeholder="Branch name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)">
-          <button class="btn btn-sm btn-primary" onclick="createBranch()">+ Add Branch</button>
-        </div>
-        <div id="branchConfig" style="margin-bottom:20px"></div>
-        <hr style="border-color:var(--border);margin:20px 0">
-
-        <!-- BATCH IMPORT -->
-        <h3 style="font-size:15px;margin-bottom:10px">📋 Batch Terminal Mapping</h3>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Paste one mapping per line: <code>TERMINAL=BRANCH</code> or <code>TERMINAL=CUSTOMER</code></p>
-        <textarea id="batchImportInput" placeholder="ASTR01=Klang Valley&#10;BCHK01=Northern&#10;CPCC01=TNB" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;outline:none;color:var(--text);font-family:monospace;height:120px;resize:vertical"></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-primary" onclick="batchImportBranches()">🏢 Import Branches</button>
-          <button class="btn btn-sm btn-primary" onclick="batchImportCustomers()">🏭 Import Customers</button>
-          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('batchImportInput').value=''">Clear</button>
-        </div>
-        <hr style="border-color:var(--border);margin:20px 0">
-
-        <!-- TERMINAL ASSIGNMENTS -->
-        <h3 style="font-size:15px;margin-bottom:10px">📍 Terminal Assignments</h3>
-        <div id="terminalAssignments"></div>
-        <hr style="border-color:var(--border);margin:20px 0">
-
-        <!-- DANGER ZONE -->
-        <h3 style="font-size:15px;margin-bottom:8px;color:var(--red)">⚠️ Danger Zone</h3>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Clear all cheques, batches, receipts. Users, branches, and customers preserved.</p>
-        <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Cheque Data</button>
-      </div>
+      <div style="max-width:700px" id="settingsPageContent"></div>
     </div>
   </div>
 </div>
@@ -405,7 +364,7 @@ function authenticate(u,p){const x=getUser(u);return(x&&x.password===p)?x:null}
 // ─── Helpers ──────────────────────────────────────────────
 function esc(s){if(typeof s!=='string')return s||'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).substr(2,8)}
-function toast(m,t='info'){const c=document.getElementById('toastContainer');const e=document.createElement('div');e.className='toast '+t;e.textContent=m;c.appendChild(e);setTimeout(()=>{e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>e.remove(),400)},3500)}
+function toast(m,t='info'){const c=document.getElementById('toastContainer');const e=document.createElement('div');e.className='toast '+t;e.textContent=m;c.appendChild(e);const d=t==='error'?6000:3500;setTimeout(()=>{e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>e.remove(),400)},d)}
 function fd(d){if(!d)return'—';const dt=new Date(d);return isNaN(dt)?d:dt.toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'})}
 function fc(n){const v=parseFloat(n);return isNaN(v)?'—':'RM '+v.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function hasRole(r){return CURRENT_USER&&CURRENT_USER.roles.includes(r)}
@@ -470,12 +429,11 @@ function doLogout(){
    MODULE 3 — SIDEBAR
    ════════════════════════════════════════════════════════════ */
 const NAV_ITEMS = [
-  {id:'dashboard',label:'Dashboard',icon:'📊',roles:['*']},
+  {id:'dashboard',label:'Home',icon:'📊',roles:['*']},
+  {id:'batches',label:'Reconcile Cheques',icon:'📋',roles:['*']},
+  {id:'verify',label:'Verification',icon:'✅',roles:['site_admin','process_admin','verifier']},
+  {id:'history',label:'Report',icon:'📜',roles:['*']},
   {id:'import',label:'Import PDF',icon:'📥',roles:['site_admin','process_admin']},
-  {id:'batches',label:'My Batches',icon:'📋',roles:['site_admin','process_admin','user']},
-  {id:'verify',label:'Verify',icon:'✅',roles:['site_admin','process_admin','verifier']},
-  {id:'history',label:'History',icon:'📜',roles:['*']},
-  {id:'users',label:'Users',icon:'👥',roles:['site_admin']},
   {id:'settings',label:'Settings',icon:'⚙️',roles:['site_admin']},
 ];
 
@@ -521,54 +479,15 @@ function switchPage(id){
    MODULE 4 — DASHBOARD (Batch view)
    ════════════════════════════════════════════════════════════ */
 function renderDashboard(){
-  let batches=getAllBatches();
-  if(!hasRole(ROLE.SITE_ADMIN)&&!hasRole(ROLE.PROCESS_ADMIN)){
-    // User sees only their assigned batches
-    batches=batches.filter(b=>b.cheques.some(c=>c.assignedTo===CURRENT_USER.username));
-  }
-  const search=(document.getElementById('searchInput').value||'').toLowerCase();
-  const sf=document.getElementById('statusFilter').value;
-  const bf=document.getElementById('branchFilter').value;
-  const lf=document.getElementById('locFilter2').value;
-
-  batches=batches.filter(b=>{
-    if(sf!=='all'&&b.status!==sf)return false;
-    if(bf!=='all'&&b.branch!==bf)return false;
-    if(lf!=='all'&&b.terminal!==lf)return false;
-    if(search&&![b.terminal,b.batch,b.branch].some(x=>x.toLowerCase().includes(search)))return false;
-    return true;
-  });
-
-  // Stats
   const all=getAllBatches();
   document.getElementById('statsBar').innerHTML=`
     <div class="stat-card"><div class="label">Total Batches</div><div class="value">${all.length}</div></div>
-    <div class="stat-card"><div class="label">Pending</div><div class="value amber">${all.filter(b=>b.status==='pending').length}</div></div>
-    <div class="stat-card"><div class="label">In Progress</div><div class="value blue">${all.filter(b=>b.status==='in_progress').length}</div></div>
-    <div class="stat-card"><div class="label">Awaiting Verify</div><div class="value green">${all.filter(b=>b.status==='awaiting_verification').length}</div></div>
-    <div class="stat-card"><div class="label">Closed</div><div class="value">${all.filter(b=>b.status==='closed').length}</div></div>`;
-
-  // Populate filters
-  const branches=[...new Set(all.map(b=>b.branch))].sort();
-  const locs=[...new Set(all.map(b=>b.terminal))].sort();
-  const bSel=document.getElementById('branchFilter'),lSel=document.getElementById('locFilter2');
-  const bv=bSel.value, lv=lSel.value;
-  bSel.innerHTML='<option value="all">All Branches</option>'+branches.map(x=>`<option value="${x}">${x}</option>`).join('');
-  lSel.innerHTML='<option value="all">All Locations</option>'+locs.map(x=>`<option value="${x}">${x}</option>`).join('');
-  bSel.value=bv;lSel.value=lv;
-
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='pending';renderBatches()"><div class="label">Pending</div><div class="value amber">${all.filter(b=>b.status==='pending').length}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='in_progress';renderBatches()"><div class="label">In Progress</div><div class="value blue">${all.filter(b=>b.status==='in_progress').length}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='awaiting_verification';renderBatches()"><div class="label">Awaiting Verify</div><div class="value green">${all.filter(b=>b.status==='awaiting_verification').length}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='closed';renderBatches()"><div class="label">Closed</div><div class="value">${all.filter(b=>b.status==='closed').length}</div></div>`;
   const grid=document.getElementById('batchGrid');
-  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📭</div><h3>No batches found</h3></div>`;return;}
-  grid.innerHTML=batches.sort((a,b)=>new Date(b.cheques[0]?.createdAt)-new Date(a.cheques[0]?.createdAt)).map(b=>`
-    <div class="batch-card" onclick="openBatchModal('${b.key}')">
-      <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)}</div></div>
-        <div class="total-amt">${fc(b.total)}</div></div>
-      <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-        <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
-        ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt</span>':''}
-      </div>
-    </div>`).join('');
+  if(grid)grid.innerHTML='';
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -724,28 +643,40 @@ function verifyBatch(key,status){
    MODULE 6 — BATCHES PAGE (driver view)
    ════════════════════════════════════════════════════════════ */
 function renderBatches(){
-  let batches=getAllBatches().filter(b=>b.cheques.some(c=>
-    c.assignedTo===CURRENT_USER.username||hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN)
-  ));
+  let batches=getAllBatches();
+  if(!hasRole(ROLE.SITE_ADMIN)&&!hasRole(ROLE.PROCESS_ADMIN)){
+    batches=batches.filter(b=>b.cheques.some(c=>c.assignedTo===CURRENT_USER.username));
+  }
   const search=(document.getElementById('batchSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('batchStatusFilter')?.value||'all';
+  const bf=document.getElementById('branchFilter2')?.value||'all';
   batches=batches.filter(b=>{
     if(sf!=='all'&&b.status!==sf)return false;
-    if(search&&![b.terminal,b.batch].some(x=>x.toLowerCase().includes(search)))return false;
+    if(bf!=='all'&&b.branch!==bf)return false;
+    if(search&&![b.terminal,b.batch,b.branch].some(x=>x.toLowerCase().includes(search)))return false;
     return true;
   });
   const grid=document.getElementById('batchGrid2');
-  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No batches assigned</h3></div>`;return;}
+  if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No batches found</h3></div>`;return;}
   grid.innerHTML=batches.sort((a,b)=>a.status.localeCompare(b.status)).map(b=>`
     <div class="batch-card" onclick="openBatchModal('${b.key}')">
       <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)}</div></div>
         <div class="total-amt">${fc(b.total)}</div></div>
-      <div class="meta"><span>📄 ${b.count} cheques</span></div>
+      <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span></div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
         <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
-        ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt uploaded</span>':''}
+        ${b.hasReceipt?'<span style="font-size:11px;color:var(--text-muted)">📎 Receipt</span>':''}
+        ${b.cheques.some(c=>c.status==='pending')?'<span style="font-size:10px;color:var(--amber)">⏳ '+b.cheques.filter(c=>c.status==='pending').length+' pending</span>':''}
       </div>
     </div>`).join('');
+  // Populate branch filter
+  const bSel=document.getElementById('branchFilter2');
+  if(bSel){
+    const branches=[...new Set(getAllBatches().map(b=>b.branch))].sort();
+    const bv=bSel.value;
+    bSel.innerHTML='<option value="all">All Branches</option>'+branches.map(x=>`<option value="${x}">${x}</option>`).join('');
+    bSel.value=bv;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -928,116 +859,156 @@ function doChangePassword(){
   saveDB();closeBatchModal();toast('Password updated','success');
 }
 
-/* ════════════════════════════════════════════════════════════
-   MODULE 10 — SETTINGS (Branch config)
-   ════════════════════════════════════════════════════════════ */
-function renderSettings(){
-  const terminals=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
-  const branchNames = DB.branches || [];
-  let html=`<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-    <input id="newBranchName" placeholder="New branch name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1">
-    <button class="btn btn-sm btn-primary" onclick="createBranch()">+ Add Branch</button>
-  </div>`;
-  
-  // Show existing branches as cards
-  if(branchNames.length > 0){
-    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">`;
-    branchNames.forEach(b=>{
-      const count = Object.values(DB.branchMap).filter(v=>v===b).length;
-      html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:8px">
-        <span>🏢 ${esc(b)}</span>
-        <span style="font-size:11px;color:var(--text-muted)">${count} terminals</span>
-        <button class="btn btn-danger btn-xs" onclick="deleteBranch('${b}')">✕</button>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-  
-  // Terminals grouped by branch
-  const grouped={};
-  terminals.forEach(t=>{
-    const b=DB.branchMap[t];
-    if(!grouped[b])grouped[b]=[];
-    grouped[b].push(t);
-  });
-  
-  // Show unassigned terminals
-  const unassigned = terminals.filter(t=>!DB.branchMap[t]);
-  if(unassigned.length > 0){
-    html+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
-      <div style="background:var(--surface2);padding:8px 12px;font-size:13px;font-weight:600">📌 Unassigned Terminals (${unassigned.length})</div>
-      <div style="padding:6px 12px">`;
-    unassigned.forEach(t=>{
-      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
-        <span>${esc(t)}</span>
-        <select onchange="moveTerminal('${t}',this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;outline:none">
-          <option value="">— Assign to branch —</option>
-          ${branchNames.map(x=>`<option value="${x}">${esc(x)}</option>`).join('')}
-        </select>
-      </div>`;
-    });
-    html+=`</div></div>`;
-  }
-  
-  // Assigned terminals by branch
-  branchNames.forEach(b=>{
-    const terms = terminals.filter(t=>DB.branchMap[t]===b);
-    if(terms.length===0) return;
-    html+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">
-      <div style="background:var(--surface2);padding:8px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
-        <span>🏢 ${esc(b)} (${terms.length})</span>
-        <button class="btn btn-danger btn-xs" onclick="deleteBranch('${b}')">🗑</button>
-      </div>
-      <div style="padding:6px 12px">`;
-    terms.forEach(t=>{
-      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
-        <span>${esc(t)}</span>
-        </div>`;
-    });
-    html+=`</div></div>`;
-  });
-  
-  document.getElementById('branchConfig').innerHTML=html;
-}
+const MODULE_VER = '2.0';
+let settingsTab=0;
 
-function createBranch(){
+function renderSettings(){
+  if(!hasRole(ROLE.SITE_ADMIN)){document.getElementById('settingsPageContent').innerHTML='';return;}
+  const tabs=[
+    {id:'s-users',label:'👥 User Administration'},
+    {id:'s-customers',label:'🏭 Customer Profiling'},
+    {id:'s-jobs',label:'🏢 Job Profiling'}
+  ];
+  let h='<div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px">';
+  tabs.forEach((t,i)=>{const a=i===settingsTab?'btn-primary':'btn-secondary';
+    h+=`<button class="btn btn-sm ${a}" onclick="switchSettingsTab(${i})">${t.label}</button>`;});
+  h+='</div><div id="settingsContent"></div>';
+  document.getElementById('settingsPageContent').innerHTML=h;
+  switchSettingsTab(settingsTab);
+}
+function switchSettingsTab(i){
+  settingsTab=i;renderSettings();
+  if(i===0)renderSettingsUsers();
+  else if(i===1)renderSettingsCustomers();
+  else renderSettingsJobs();
+}
+function renderSettingsUsers(){
+  const c=document.getElementById('settingsContent');
+  if(!hasRole(ROLE.SITE_ADMIN)){c.innerHTML='';return;}
+  let h='<div style="margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="showAddUser()">+ Add User</button></div>';
+  h+='<div class="table-wrap"><table><thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Roles</th><th>Branch</th><th>Actions</th></tr></thead><tbody>';
+  DB.users.forEach(u=>{
+    const rc=['site_admin','process_admin','user','verifier'].map(r=>`<label style="font-size:11px;margin-right:6px;white-space:nowrap"><input type="checkbox" disabled ${u.roles.includes(r)?'checked':''}> ${ROLE_LABELS[r]}</label>`).join('');
+    h+=`<tr><td><strong>${esc(u.username)}</strong></td><td>${esc(u.name||'')}</td><td style="font-size:11px">${esc(u.email||'—')}</td><td>${rc}</td><td style="font-size:11px">${esc(u.location||'—')}</td>
+      <td>${u.username==='admin'?'—':`<button class="btn btn-danger btn-xs" onclick="deleteUser(${u.id})">🗑</button> <button class="btn btn-secondary btn-xs" onclick="editUser(${u.id})">✏️</button>`}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  c.innerHTML=h;
+}
+function renderSettingsCustomers(){
+  const custs=DB.customers||[],terms=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
+  let h='<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center"><input id="newCustomerInput" placeholder="Customer name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)"><button class="btn btn-sm btn-primary" onclick="createCustomerFromSettings()">+ Add Customer</button></div>';
+  if(custs.length>0){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">';
+    custs.forEach(c=>{const cnt=Object.values(DB.customerMap||{}).filter(v=>v===c).length;
+      h+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:8px"><span>🏭 ${esc(c)}</span><span style="font-size:11px;color:var(--text-muted)">${cnt} terminals</span><button class="btn btn-danger btn-xs" onclick="if(confirm(\'Delete?\'))deleteCustomer(\'${c}\')">✕</button></div>`;
+    });
+    h+='</div>';
+  }
+  const unassigned=terms.filter(t=>!(DB.customerMap||{})[t]);
+  if(unassigned.length>0){
+    h+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden"><div style="background:var(--surface2);padding:8px 12px;font-size:13px;font-weight:600">📌 Unassigned Terminals (${unassigned.length})</div><div style="padding:6px 12px">`;
+    unassigned.forEach(t=>{
+      h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)"><span>${esc(t)}</span>
+        <select onchange="assignCustomer('${t}',this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;outline:none"><option value="">— Assign customer —</option>${custs.map(x=>`<option value="${x}">${esc(x)}</option>`).join('')}</select></div>`;
+    });
+    h+='</div></div>';
+  }
+  custs.forEach(c=>{
+    const terms=terms.filter(t=>(DB.customerMap||{})[t]===c);
+    if(terms.length===0)return;
+    h+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden"><div style="background:var(--surface2);padding:6px 12px;font-size:12px;font-weight:600">🏭 ${esc(c)} (${terms.length})</div><div style="padding:4px 12px">${terms.map(t=>`<div style="padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)">${esc(t)}</div>`).join('')}</div></div>`;
+  });
+  document.getElementById('settingsContent').innerHTML=h;
+}
+function renderSettingsJobs(){
+  const terms=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort(),bNames=DB.branches||[],custs=DB.customers||[];
+  let h='<div style="margin-bottom:16px"><div style="display:flex;gap:8px;margin-bottom:10px;align-items:center"><input id="newBranchName" placeholder="Branch name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)"><button class="btn btn-sm btn-primary" onclick="createBranchFromSettings()">+ Add Branch</button></div>';
+  if(bNames.length>0){h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';bNames.forEach(b=>{const cnt=Object.values(DB.branchMap).filter(v=>v===b).length;h+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;display:flex;align-items:center;gap:6px"><span>🏢 ${esc(b)}</span><span style="font-size:10px;color:var(--text-muted)">${cnt} terminals</span><button class="btn btn-danger btn-xs" onclick="deleteBranch(\'${b}\')">✕</button></div>`;});h+='</div>';}
+  h+='<textarea id="batchImportInput" placeholder="ASTR01=Klang Valley\nBCHK01=Northern\nCPCC01=TNB" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;outline:none;color:var(--text);font-family:monospace;height:80px;resize:vertical"></textarea><div style="display:flex;gap:8px;margin:6px 0 14px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" onclick="batchImportBranches()">🏢 Import Branches</button><button class="btn btn-sm btn-primary" onclick="batchImportCustomers()">🏭 Import Customers</button></div>';
+  h+='<h4 style="font-size:13px;margin-bottom:8px">📍 Terminal Assignments</h4>';
+  const unassigned=terms.filter(t=>!DB.branchMap[t]);
+  if(unassigned.length>0){
+    h+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden"><div style="background:var(--surface2);padding:6px 10px;font-size:12px;font-weight:600">📌 Unassigned (${unassigned.length})</div><div style="padding:4px 10px">`;
+    unassigned.forEach(t=>{const cc=DB.customerMap?.[t]||'';
+      h+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border);gap:6px"><span style="min-width:60px">${esc(t)}</span>
+        <select onchange="moveTerminal(\'${t}\',this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 4px;font-size:10px;outline:none;flex:1"><option value="">Branch</option>${bNames.map(x=>`<option value="${x}">${esc(x)}</option>`).join('')}</select>
+        <select onchange="assignCustomer(\'${t}\',this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 4px;font-size:10px;outline:none;flex:1"><option value="">Customer</option>${custs.map(x=>`<option value="${x}" ${cc===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+    });
+    h+='</div></div>';
+  }
+  bNames.forEach(b=>{
+    const ts=terms.filter(t=>DB.branchMap[t]===b);if(ts.length===0)return;
+    h+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden"><div style="background:var(--surface2);padding:5px 10px;font-size:12px;font-weight:600">🏢 ${esc(b)} (${ts.length})</div><div style="padding:3px 10px">`;
+    ts.forEach(t=>{const cc=DB.customerMap?.[t]||'';
+      h+=`<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11px;border-bottom:1px solid var(--border);gap:6px"><span>${esc(t)}</span>
+        <select onchange="assignCustomer(\'${t}\',this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 4px;font-size:10px;outline:none"><option value="">No customer</option>${custs.map(x=>`<option value="${x}" ${cc===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+    });
+    h+='</div></div>';
+  });
+  h+='<hr style="border-color:var(--border);margin:16px 0"><h3 style="font-size:14px;margin-bottom:6px;color:var(--red)"> Danger Zone</h3><p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Clear all cheques, batches, receipts. Preserves users, branches, customers.</p><button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Cheque Data</button>';
+  document.getElementById('settingsContent').innerHTML=h;
+}
+function createBranchFromSettings(){
   const name=document.getElementById('newBranchName').value.trim();
   if(!name||name==='Unassigned'){toast('Enter a branch name','error');return;}
-  if(!DB.branches) DB.branches = [];
+  if(!DB.branches)DB.branches=[];
   if(DB.branches.includes(name)){toast('Branch already exists','error');return;}
-  DB.branches.push(name);
-  DB.branches.sort();
-  saveDB();
-  renderSettings();
+  DB.branches.push(name);DB.branches.sort();saveDB();
   document.getElementById('newBranchName').value='';
-  toast(`Branch "${name}" created`,'success');
+  renderSettingsJobs();toast(`Branch "${name}" created`,'success');
 }
-
+function deleteBranch(name){
+  if(!confirm(`Delete branch "${name}"?`))return;
+  DB.branches=(DB.branches||[]).filter(b=>b!==name);
+  Object.keys(DB.branchMap).forEach(t=>{if(DB.branchMap[t]===name)delete DB.branchMap[t];});
+  saveDB();renderSettingsJobs();
+}
 function moveTerminal(terminal,newBranch){
   if(!newBranch){delete DB.branchMap[terminal];}
   else{DB.branchMap[terminal]=newBranch;}
-  saveDB();renderSettings();renderDashboard();
+  saveDB();renderSettingsJobs();
 }
-
-function deleteBranch(name){
-  if(!DB.branches) DB.branches = [];
-  if(!confirm(`Delete branch "${name}"? Terminals will become unassigned.`))return;
-  DB.branches = DB.branches.filter(b=>b!==name);
-  Object.keys(DB.branchMap).forEach(t=>{if(DB.branchMap[t]===name)delete DB.branchMap[t];});
-  saveDB();renderSettings();renderDashboard();
+function createCustomerFromSettings(){
+  const name=document.getElementById('newCustomerInput')?.value?.trim();
+  if(!name){toast('Enter a customer name','error');return;}
+  if(!DB.customers)DB.customers=[];
+  if(DB.customers.includes(name)){toast('Customer already exists','error');return;}
+  DB.customers.push(name);DB.customers.sort();saveDB();
+  document.getElementById('newCustomerInput').value='';
+  renderSettingsCustomers();toast(`Customer "${name}" created`,'success');
 }
-
-function saveBranchConfig(){saveDB();toast('Branch config saved','success');}
-
+function deleteCustomer(name){
+  DB.customers=(DB.customers||[]).filter(c=>c!==name);
+  if(DB.customerMap)Object.keys(DB.customerMap).forEach(t=>{if(DB.customerMap[t]===name)delete DB.customerMap[t];});
+  saveDB();renderSettingsCustomers();
+}
+function assignCustomer(terminal,customer){
+  if(!DB.customerMap)DB.customerMap={};
+  if(!customer)delete DB.customerMap[terminal];
+  else DB.customerMap[terminal]=customer;
+  saveDB();if(settingsTab===2)renderSettingsJobs();else renderSettingsCustomers();
+}
+function batchImportBranches(){
+  const text=document.getElementById('batchImportInput')?.value?.trim();
+  if(!text){toast('Paste terminal=branch mappings','error');return;}
+  if(!DB.branches)DB.branches=[];let imp=0;
+  text.split('\n').forEach(line=>{const p=line.split('=');if(p.length<2)return;const t=p[0].trim().toUpperCase(),b=p.slice(1).join('=').trim();if(!t||!b)return;DB.branchMap[t]=b;if(!DB.branches.includes(b))DB.branches.push(b);imp++;});
+  DB.branches.sort();saveDB();renderSettingsJobs();toast(`Imported ${imp} terminal→branch`,'success');
+}
+function batchImportCustomers(){
+  const text=document.getElementById('batchImportInput')?.value?.trim();
+  if(!text){toast('Paste terminal=customer mappings','error');return;}
+  if(!DB.customers)DB.customers=[];if(!DB.customerMap)DB.customerMap={};let imp=0;
+  text.split('\n').forEach(line=>{const p=line.split('=');if(p.length<2)return;const t=p[0].trim().toUpperCase(),c=p.slice(1).join('=').trim();if(!t||!c)return;DB.customerMap[t]=c;if(!DB.customers.includes(c))DB.customers.push(c);imp++;});
+  DB.customers.sort();saveDB();toast(`Imported ${imp} terminal→customer`,'success');
+  if(settingsTab===2)renderSettingsJobs();else renderSettingsCustomers();
+}
 function clearAllData(){
-  if(!confirm('Delete ALL cheque data, batches, and receipts? Users and settings will NOT be affected.'))return;
+  if(!confirm('Delete ALL cheque data, batches, receipts? Users preserved.'))return;
   if(!confirm('Are you sure? This cannot be undone.'))return;
-  DB.cheques = [];
-  DB.batchReceipts = {};
-  DB.branchMap = {};
-  saveDB();
-  renderDashboard();renderSettings();
-  toast('All cheque data cleared','info');
+  DB.cheques=[];DB.batchReceipts={};DB.branchMap={};DB.customerMap={};saveDB();
+  renderDashboard();renderSettings();toast('All cheque data cleared','info');
 }
 
 /* ════════════════════════════════════════════════════════════

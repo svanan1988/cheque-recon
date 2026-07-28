@@ -38,30 +38,31 @@ input,select,textarea,button{font:inherit;color:inherit}
 .app-layout{display:none;min-height:100vh}
 .app-layout.open{display:flex}
 
-.sidebar{width:60px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow:hidden;transition:width .25s ease}
-.sidebar:hover,.sidebar.expanded{width:var(--sidebar-w)}
-.sidebar.expanded{overflow-y:auto}
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;transition:width .25s ease}
+.sidebar.collapsed{width:60px;overflow:hidden}
+.sidebar.collapsed:hover{overflow-y:auto}
 
 .sidebar-brand{padding:16px 10px;border-bottom:1px solid var(--border);font-size:0;white-space:nowrap;display:flex;align-items:center;gap:8px;min-height:52px}
 .sidebar-brand .brand-icon{font-size:18px;width:40px;text-align:center;flex-shrink:0}
-.sidebar-brand .brand-text{font-size:14px;font-weight:700;opacity:0;transition:opacity .2s ease .1s}
-.sidebar:hover .brand-text,.sidebar.expanded .brand-text{opacity:1}
-.sidebar-brand .brand-text span{color:var(--accent)}
+.sidebar-brand .brand-text{font-size:14px;font-weight:700}
+.sidebar.collapsed .sidebar-brand .brand-text,.sidebar.collapsed .sidebar-toggle{opacity:0;pointer-events:none}
 
-.sidebar-toggle{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:6px;font-size:14px;position:absolute;top:14px;right:8px;display:none;transition:.2s}
+.sidebar-toggle{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:6px;font-size:14px;transition:.2s}
 .sidebar-toggle:hover{background:var(--surface2);color:var(--text)}
-.sidebar:hover .sidebar-toggle,.sidebar.expanded .sidebar-toggle{display:block}
 
 .sidebar-nav{flex:1;padding:6px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:0;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left;white-space:nowrap}
 .nav-item:hover{background:var(--surface2);color:var(--text)}
 .nav-item.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.3)}
 .nav-item .icon{font-size:16px;width:36px;text-align:center;flex-shrink:0}
-.nav-item .label{font-size:13px;opacity:0;transition:opacity .2s ease .1s}
-.sidebar:hover .nav-item .label,.sidebar.expanded .nav-item .label{opacity:1}
-.sidebar:hover .nav-item,.sidebar.expanded .nav-item{font-size:13px}
+.nav-item .label{font-size:13px}
+.sidebar.collapsed .nav-item .label{opacity:0;pointer-events:none}
+.sidebar.collapsed .nav-item{font-size:0}
+.sidebar.collapsed .sidebar-footer .user-name,.sidebar.collapsed .sidebar-footer .role-badge,.sidebar.collapsed .sidebar-footer .logout-btn{opacity:0;pointer-events:none;font-size:0}
+.sidebar.collapsed .nav-sep{opacity:0!important;pointer-events:none}
 
-.sidebar-footer{padding:10px 12px;border-top:1px solid var(--border);font-size:0;white-space:nowrap}
+.sidebar-footer{padding:10px 12px;border-top:1px solid var(--border);font-size:12px}
+.sidebar.collapsed .sidebar-footer{font-size:0}
 .sidebar-footer .user-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;min-height:28px}
 .sidebar-footer .user-row .user-avatar{font-size:14px;width:36px;text-align:center;flex-shrink:0}
 .sidebar-footer .user-row .user-name{font-size:12px;opacity:0;transition:opacity .2s ease .1s;overflow:hidden;text-overflow:ellipsis}
@@ -215,20 +216,20 @@ input,select,textarea,button{font:inherit;color:inherit}
       <h2 id="pageTitle">Dashboard</h2>
     </header>
 
-    <!-- DASHBOARD -->
+    <!-- HOME -->
     <div class="page active" id="page-dashboard">
-      <div class="stats" id="statsBar"></div>
       <div class="filter-bar">
-        <input type="text" class="search" id="searchInput" placeholder="🔍 Search cheque, customer, location..." oninput="renderDashboard()">
-        <select id="statusFilter" onchange="renderDashboard()">
+        <input type="date" id="dashDateFrom" onchange="renderDashboard()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
+        <input type="date" id="dashDateTo" onchange="renderDashboard()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
+        <select id="dashStatusFilter" onchange="renderDashboard()">
           <option value="all">All Status</option>
-          <option value="pending">🟠 Pending</option><option value="in_progress">🔵 In Progress</option>
-          <option value="awaiting_verification">🟢 Awaiting Verify</option><option value="verified">🔮 Verified</option><option value="closed">⚫ Closed</option>
+          <option value="pending"> Pending</option><option value="in_progress"> In Progress</option>
+          <option value="awaiting_verification"> Awaiting Verify</option><option value="verified"> Verified</option><option value="closed"> Closed</option>
         </select>
-        <select id="branchFilter" onchange="renderDashboard()"><option value="all">All Branches</option></select>
-        <select id="locFilter2" onchange="renderDashboard()"><option value="all">All Locations</option></select>
+        <select id="dashBranchFilter" onchange="renderDashboard()"><option value="all">All Branches</option></select>
+        <select id="dashLocFilter" onchange="renderDashboard()"><option value="all">All Locations</option></select>
       </div>
-      <div class="batch-grid" id="batchGrid"></div>
+      <div class="stats" id="statsBar"></div>
     </div>
 
     <!-- IMPORT -->
@@ -266,6 +267,8 @@ input,select,textarea,button{font:inherit;color:inherit}
           <option value="awaiting_verification"> Awaiting Verify</option><option value="verified"> Verified</option><option value="closed"> Closed</option>
         </select>
         <select id="branchFilter2" onchange="renderBatches()"><option value="all">All Branches</option></select>
+        <input type="date" id="reconDateFrom" onchange="renderBatches()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
+        <input type="date" id="reconDateTo" onchange="renderBatches()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
       </div>
       <div class="batch-grid" id="batchGrid2"></div>
     </div>
@@ -495,11 +498,11 @@ function buildSidebar(){
   const cls=CURRENT_USER.roles[0]||'user';badge.className='role-badge '+cls;
 }
 
-let sidebarExpanded = false;
+let sidebarCollapsed = false;
 function toggleSidebar(){
-  sidebarExpanded = !sidebarExpanded;
-  document.querySelector('.sidebar').classList.toggle('expanded', sidebarExpanded);
-  document.querySelector('.sidebar-toggle').textContent = sidebarExpanded ? '✕' : '☰';
+  sidebarCollapsed = !sidebarCollapsed;
+  document.querySelector('.sidebar').classList.toggle('collapsed', sidebarCollapsed);
+  document.querySelector('.sidebar-toggle').textContent = sidebarCollapsed ? '☰' : '✕';
 }
 
 function switchPage(id){
@@ -531,15 +534,47 @@ function switchPage(id){
    MODULE 4 — DASHBOARD (Batch view)
    ════════════════════════════════════════════════════════════ */
 function renderDashboard(){
-  const all=getAllBatches();
+  let all=getAllBatches();
+  // Date filter
+  const df=document.getElementById('dashDateFrom')?.value,dt=document.getElementById('dashDateTo')?.value;
+  if(df||dt){
+    all=all.filter(b=>{
+      const d=new Date(b.cheques[0]?.createdAt);
+      if(df&&d<new Date(df))return false;
+      if(dt){const e=new Date(dt);e.setDate(e.getDate()+1);if(d>e)return false;}
+      return true;
+    });
+  }
+  // Status filter
+  const sf=document.getElementById('dashStatusFilter')?.value||'all';
+  if(sf!=='all')all=all.filter(b=>b.status===sf);
+  // Branch filter
+  const bf=document.getElementById('dashBranchFilter')?.value||'all';
+  if(bf!=='all')all=all.filter(b=>b.branch===bf);
+  // Cascade location
+  const lf=document.getElementById('dashLocFilter')?.value||'all';
+  // Populate branch+location filters
+  const bSel=document.getElementById('dashBranchFilter'),lSel=document.getElementById('dashLocFilter');
+  if(bSel){
+    const branches=[...new Set(getAllBatches().map(b=>b.branch))].sort();
+    bSel.innerHTML='<option value="all">All Branches</option>'+branches.map(x=>`<option value="${x}">${x}</option>`).join('');
+    bSel.value=bf;
+  }
+  if(lSel){
+    let filteredTerms=getAllBatches().map(b=>b.terminal);
+    if(bf!=='all')filteredTerms=filteredTerms.filter(t=>getBranch(t)===bf);
+    const locs=[...new Set(filteredTerms)].sort();
+    lSel.innerHTML='<option value="all">All Locations</option>'+locs.map(x=>`<option value="${x}">${x}</option>`).join('');
+    lSel.value=lf;
+  }
+  if(lf!=='all')all=all.filter(b=>b.terminal===lf);
+  // Stats
   document.getElementById('statsBar').innerHTML=`
     <div class="stat-card"><div class="label">Total Batches</div><div class="value">${all.length}</div></div>
     <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='pending';renderBatches()"><div class="label">Pending</div><div class="value amber">${all.filter(b=>b.status==='pending').length}</div></div>
     <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='in_progress';renderBatches()"><div class="label">In Progress</div><div class="value blue">${all.filter(b=>b.status==='in_progress').length}</div></div>
     <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='awaiting_verification';renderBatches()"><div class="label">Awaiting Verify</div><div class="value green">${all.filter(b=>b.status==='awaiting_verification').length}</div></div>
     <div class="stat-card" style="cursor:pointer" onclick="switchPage('batches');document.getElementById('batchStatusFilter').value='closed';renderBatches()"><div class="label">Closed</div><div class="value">${all.filter(b=>b.status==='closed').length}</div></div>`;
-  const grid=document.getElementById('batchGrid');
-  if(grid)grid.innerHTML='';
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -698,6 +733,16 @@ function renderBatches(){
   let batches=getAllBatches();
   if(!hasRole(ROLE.SITE_ADMIN)&&!hasRole(ROLE.PROCESS_ADMIN)){
     batches=batches.filter(b=>b.cheques.some(c=>c.assignedTo===CURRENT_USER.username));
+  }
+  // Date filter
+  const df=document.getElementById('reconDateFrom')?.value,dt=document.getElementById('reconDateTo')?.value;
+  if(df||dt){
+    batches=batches.filter(b=>{
+      const d=new Date(b.cheques[0]?.createdAt);
+      if(df&&d<new Date(df))return false;
+      if(dt){const e=new Date(dt);e.setDate(e.getDate()+1);if(d>e)return false;}
+      return true;
+    });
   }
   const search=(document.getElementById('batchSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('batchStatusFilter')?.value||'all';

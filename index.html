@@ -495,19 +495,18 @@ function buildSidebar(){
 function switchPage(id){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  // Handle settings sub-pages (they all use page-settings)
+  if(id.startsWith('settings-')){
+    const sp=document.getElementById('page-settings');
+    if(sp){sp.classList.add('active');document.querySelector('.header-bar h2').textContent=id.replace('settings-','').replace('-',' ').replace(/\b\w/g,c=>c.toUpperCase());}
+    renderSettings();
+    if(id==='settings-users')switchSettingsTab(0);
+    else if(id==='settings-customers')switchSettingsTab(1);
+    else if(id==='settings-jobs')switchSettingsTab(2);
+    return;
+  }
   const page=document.getElementById('page-'+id);
-  if(page){
-    // Show the page div (settings-* all use page-settings)
-    if(id.startsWith('settings-')){
-      const sp=document.getElementById('page-settings');
-      if(sp){sp.classList.add('active');document.querySelector('.header-bar h2').textContent=id.replace('settings-','').replace('-',' ').replace(/\b\w/g,c=>c.toUpperCase());}
-      renderSettings();
-      if(id==='settings-users')switchSettingsTab(0);
-      else if(id==='settings-customers')switchSettingsTab(1);
-      else if(id==='settings-jobs')switchSettingsTab(2);
-      return;
-    }
-    page.classList.add('active');
+  if(page){page.classList.add('active');
     document.querySelector('.header-bar h2').innerHTML=NAV_ITEMS.find(n=>n.id===id)?.label||id;
   }
   if(id==='dashboard')renderDashboard();
@@ -1204,7 +1203,7 @@ function renderSettingsCustomers(){
 function renderSettingsJobs(){
   const terms=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort(),bNames=DB.branches||[],custs=DB.customers||[];
   let h='<div style="margin-bottom:16px"><div style="display:flex;gap:8px;margin-bottom:10px;align-items:center"><input id="newBranchName" placeholder="Branch name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)"><button class="btn btn-sm btn-primary" onclick="createBranchFromSettings()">+ Add Branch</button></div>';
-  if(bNames.length>0){h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';bNames.forEach(b=>{const cnt=Object.values(DB.branchMap).filter(v=>v===b).length;h+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;display:flex;align-items:center;gap:6px"><span>🏢 ${esc(b)}</span><span style="font-size:10px;color:var(--text-muted)">${cnt} terminals</span><button class="btn btn-danger btn-xs" onclick="deleteBranch(\'${b}\')">✕</button></div>`;});h+='</div>';}
+  if(bNames.length>0){h+='<div class="batch-grid" style="margin-bottom:14px">';bNames.forEach(b=>{const cnt=Object.values(DB.branchMap).filter(v=>v===b).length;h+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow)"><div style="display:flex;justify-content:space-between;align-items:center"><strong>🏢 ${esc(b)}</strong><button class="btn btn-danger btn-xs" onclick="deleteBranch('${b}')">✕</button></div><div style="font-size:12px;color:var(--text-muted)">${cnt} terminal(s) assigned</div></div>`;});h+='</div>';}
   h+='<textarea id="batchImportInput" placeholder="ASTR01=Klang Valley\nBCHK01=Northern\nCPCC01=TNB" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;outline:none;color:var(--text);font-family:monospace;height:80px;resize:vertical"></textarea><div style="display:flex;gap:8px;margin:6px 0 14px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" onclick="batchImportBranches()">🏢 Import Branches</button><button class="btn btn-sm btn-primary" onclick="batchImportCustomers()">🏭 Import Customers</button></div>';
   h+='<h4 style="font-size:13px;margin-bottom:8px">📍 Terminal Assignments</h4>';
   const unassigned=terms.filter(t=>!DB.branchMap[t]);

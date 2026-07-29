@@ -820,7 +820,7 @@ function renderBatches(){
   }
   const grid=document.getElementById('batchGrid2');
   if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No batches found</h3></div>`;return;}
-  grid.innerHTML=`<div class="batch-grid">${batches.sort((a,b)=>a.status.localeCompare(b.status)).map(b=>`
+  grid.innerHTML=batches.sort((a,b)=>a.status.localeCompare(b.status)).map(b=>`
     <div class="batch-card" onclick="openBatchModal('${b.key}')">
       <div class="top">
         <div>
@@ -834,7 +834,7 @@ function renderBatches(){
         <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:${b.type==='rejected'?'var(--red-bg)':'var(--surface2)'};color:${b.type==='rejected'?'var(--red)':'var(--text-muted)'};font-weight:600">${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</span>
       </div>
       <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span>${b.hasReceipt?'<span>📎 Receipt</span>':''}</div>
-    </div>`).join('')}</div>`;
+    </div>`).join('');
 }
 
 /* ════════════════════════════════════════════════════════════

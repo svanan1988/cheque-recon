@@ -660,7 +660,7 @@ function openBatchModal(key){
       </div>
     </div>`;
   }
-  if(receiptData && (canSubmit||canVerify)) html += `<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="removeBatchReceipt('${receiptKey}')">🗑 Remove</button>`;
+  if(hasReceipt && (canSubmit||canVerify)) html += `<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="if(confirm('Remove all receipts?')){delete DB.batchReceipts['${receiptKey}'];saveDB();openBatchModal(currentBatchKey)}">🗑 Remove All</button>`;
   html += `</div>`;
 
   // Notes

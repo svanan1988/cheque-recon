@@ -260,6 +260,11 @@ input,select,textarea,button{font:inherit;color:inherit}
       <div class="batch-grid" id="batchGrid2"></div>
     </div>
 
+    <!-- INCIDENTS -->
+    <div class="page" id="page-incidents">
+      <div class="batch-grid" id="incidentsGrid"></div>
+    </div>
+
     <!-- VERIFY -->
     <div class="page" id="page-verify">
       <div class="batch-grid" id="verifyGrid"></div>
@@ -362,11 +367,14 @@ function loadDB(){
       // Ensure customers exist
       if(!DB.customers) DB.customers = [];
       if(!DB.customerMap) DB.customerMap = {};
+      // Ensure incidents exist
+      if(!DB.incidents) DB.incidents = [];
+      if(!DB.nextIncidentId) DB.nextIncidentId = 1;
       saveDB();
       return true;
     }
   }catch(e){}
-  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, branches:[], customers:[], customerMap:{}, nextUserId:1};
+  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, branches:[], customers:[], customerMap:{}, incidents:[], nextUserId:1, nextIncidentId:1};
   DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
   DB.nextUserId=2;
   saveDB();
@@ -407,7 +415,7 @@ function getAllBatches(){
     g.total = g.cheques.reduce((s,c)=>s+(c.amount||0),0);
     g.status = batchStatus(g.cheques);
     g.receiptKey = g.terminal+'_'+g.batch;
-    g.hasReceipt = !!DB.batchReceipts[g.receiptKey];
+    g.hasReceipt = DB.batchReceipts[g.receiptKey]?.length > 0;
     g.type = g.cheques.every(c=>c.jobType==='rejected') ? 'rejected' : 'bankin';
     g.date = g.cheques[0]?.issueDate || g.cheques[0]?.createdAt?.split('T')[0] || '—';
     return g;
@@ -452,6 +460,7 @@ const NAV_ITEMS = [
   {id:'verify',label:'Verification',icon:'✅',roles:['site_admin','process_admin','verifier']},
   {id:'history',label:'Report',icon:'📜',roles:['*']},
   {id:'import',label:'Import PDF',icon:'📥',roles:['site_admin','process_admin']},
+  {id:'incidents',label:'Incidents',icon:'🚨',roles:['site_admin','process_admin','verifier']},
   {type:'sep',label:'— Settings —',roles:['site_admin']},
   {id:'settings-users',label:'▸ User Admin',icon:'👥',roles:['site_admin']},
   {id:'settings-customers',label:'▸ Customer Profiling',icon:'🏭',roles:['site_admin']},
@@ -506,6 +515,7 @@ function switchPage(id){
   if(id==='verify')renderVerify();
   if(id==='history'){renderHistory();renderReportBuilder();}
   if(id==='import'){}
+  if(id==='incidents')renderIncidents();
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -572,7 +582,8 @@ function openBatchModal(key){
   const canVerify = isSiteAdmin || isProcAdmin || isVerifier;
   const canSubmit = isUser || isSiteAdmin || isProcAdmin;
   const receiptKey = batch.receiptKey;
-  const receiptData = DB.batchReceipts[receiptKey];
+  const receiptArr = DB.batchReceipts[receiptKey]||[];
+  const hasReceipt = receiptArr.length>0;
 
   document.getElementById('modalTitle').textContent = `📋 ${batch.terminal} · Batch ${batch.batch} · ${batch.date}`;
 
@@ -605,29 +616,39 @@ function openBatchModal(key){
       </tr></thead><tbody>${chequeTable}</tbody></table>
     </div>`;
 
-  // Receipt section
-  const receiptHtml = receiptData ? `<img class="receipt-preview" src="${receiptData.data}" alt="Receipt" style="max-width:100%;max-height:200px;border-radius:6px;display:block;margin-bottom:8px;background:#000">` : '';
+  // Receipt section (multiple)
+  let receiptHtml='';
+  receiptArr.forEach((r,i)=>{
+    receiptHtml+=`<div style="margin-bottom:6px;position:relative">
+      <img src="${r.data}" alt="Receipt" style="max-width:100%;max-height:120px;border-radius:6px;display:block;background:#000;cursor:pointer" onclick="window.open('${r.data}')">
+      <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${esc(r.fileName)} · ${fd(r.uploadedAt)}</div>
+      ${(canSubmit||canVerify)?`<button class="btn btn-danger btn-xs" style="position:absolute;top:4px;right:4px" onclick="removeBatchReceipt('${receiptKey}',${i})">✕</button>`:''}
+    </div>`;
+  });
   html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
-    <h4 style="font-size:13px;margin-bottom:8px">📎 Batch Receipt</h4>${receiptHtml}`;
+    <h4 style="font-size:13px;margin-bottom:8px">📎 Batch Receipt (${receiptArr.length})</h4>${receiptHtml}`;
   
   if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
-    const hasReceipt = !!receiptData;
-    // Action selector
-    html += `<div style="margin-bottom:10px">
+    // Action selector with live toggle for Missing
+    const selId='batchAction_'+receiptKey;
+    html += `<div style="margin-bottom:8px">
       <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Action</label>
-      <select id="batchAction" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:100%">
+      <select id="${selId}" onchange="toggleUploadForAction('${receiptKey}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:100%">
         <option value="bankin">🏦 Bank In</option>
         <option value="return">🔴 Return to Customer</option>
         <option value="missing">❓ Missing</option>
         <option value="others">📝 Others</option>
       </select>
     </div>`;
-    html += `<button class="btn btn-sm ${hasReceipt?'btn-success':'btn-secondary'}" onclick="triggerReceiptUpload('${receiptKey}')" style="cursor:pointer;${hasReceipt?'border-color:var(--green)':''}">
-      ${hasReceipt?'✅ Receipt Uploaded':'📁 Upload Receipt'}
-    </button>
-    <input type="file" id="receiptInput_${receiptKey}" accept="image/*,.pdf" style="display:none" onchange="uploadBatchReceipt(event,'${receiptKey}')">
-    <div style="font-size:11px;color:${hasReceipt?'var(--green)':'var(--text-muted)'};margin-top:4px">
-      ${hasReceipt?'Receipt ready for submission':'* Receipt required before submitting'}
+    const isMiss='missing';
+    html += `<div id="uploadArea_${receiptKey}">
+      <button class="btn btn-sm ${hasReceipt?'btn-success':'btn-secondary'}" onclick="triggerReceiptUpload('${receiptKey}')" style="cursor:pointer">
+        ${hasReceipt?'✅ Add Another Receipt':'📁 Upload Receipt'}
+      </button>
+      <input type="file" id="receiptInput_${receiptKey}" accept="image/*,.pdf" style="display:none" onchange="uploadBatchReceipt(event,'${receiptKey}')">
+      <div style="font-size:11px;color:${hasReceipt?'var(--green)':'var(--text-muted)'};margin-top:4px">
+        ${hasReceipt?'Receipts ready for submission':'* Receipt required unless action is "Missing"'}
+      </div>
     </div>`;
   }
   if(receiptData && (canSubmit||canVerify)) html += `<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="removeBatchReceipt('${receiptKey}')">🗑 Remove</button>`;
@@ -663,7 +684,8 @@ function uploadBatchReceipt(e,key){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=function(ev){
-    DB.batchReceipts[key]={data:ev.target.result,fileName:file.name,uploadedAt:new Date().toISOString(),uploadedBy:CURRENT_USER.username};
+    if(!DB.batchReceipts[key])DB.batchReceipts[key]=[];
+    DB.batchReceipts[key].push({data:ev.target.result,fileName:file.name,uploadedAt:new Date().toISOString(),uploadedBy:CURRENT_USER.username});
     saveDB();
     openBatchModal(currentBatchKey);
     toast('Receipt uploaded','success');
@@ -671,41 +693,64 @@ function uploadBatchReceipt(e,key){
   reader.readAsDataURL(file);
 }
 
-function removeBatchReceipt(key){
+function removeBatchReceipt(key,idx){
   if(!confirm('Remove receipt?'))return;
-  delete DB.batchReceipts[key];saveDB();openBatchModal(currentBatchKey);
+  if(!DB.batchReceipts[key])return;
+  if(idx!==undefined)DB.batchReceipts[key].splice(idx,1);
+  else delete DB.batchReceipts[key];
+  if(DB.batchReceipts[key]?.length===0)delete DB.batchReceipts[key];
+  saveDB();openBatchModal(currentBatchKey);
+}
+
+function toggleUploadForAction(key){
+  const sel=document.getElementById('batchAction_'+key);
+  const isMissing=sel?.value==='missing';
+  const area=document.getElementById('uploadArea_'+key);
+  if(area)area.style.display=isMissing?'none':'block';
 }
 
 function submitBatch(key){
-  // Require receipt
   const receiptKey = key.split('|').join('_');
-  if(!DB.batchReceipts[receiptKey]){
+  const actionSel=document.getElementById('batchAction_'+receiptKey);
+  const action=actionSel?.value||'bankin';
+  // Only require receipt if action is NOT missing
+  if(action!=='missing' && (!DB.batchReceipts[receiptKey]||DB.batchReceipts[receiptKey].length===0)){
     toast('Upload a receipt before submitting','error');
     return;
   }
-  // Get checked cheque IDs
   const checked = [...document.querySelectorAll('.chk-cheque:checked')].map(el=>el.dataset.id);
   if(checked.length===0){toast('Check at least one cheque to submit','error');return;}
   const notes = document.getElementById('batchNotes')?.value||'';
   const now = new Date().toISOString();
-  // Update selected cheques
-  const action = document.getElementById('batchAction')?.value||'bankin';
-  const actionLabels = {bankin:'Bank In',return:'Return to Customer',missing:'Missing',others:'Others'};
+  let incidentTerminals=[];
   DB.cheques.forEach(c=>{
     if(checked.includes(c.id)){
       c.status='awaiting_verification';
       c.jobType = (action==='bankin') ? 'bankin' : 'rejected';
       c.notes = notes||c.notes;
       if(action==='return')c.rejectReason='Returned to customer';
-      else if(action==='missing')c.rejectReason='Cheque missing';
+      else if(action==='missing'){c.rejectReason='Cheque missing';if(!incidentTerminals.includes(c.terminal))incidentTerminals.push(c.terminal);}
       else if(action==='others')c.rejectReason=notes||'Others';
       c.updatedAt=now;
     }
   });
-  saveDB();
-  closeBatchModal();
+  // Create incident for Missing cheques
+  if(action==='missing' && incidentTerminals.length>0){
+    const batch=key.split('|');
+    if(!DB.incidents)DB.incidents=[];
+    if(!DB.nextIncidentId)DB.nextIncidentId=1;
+    DB.incidents.push({
+      id:DB.nextIncidentId++,terminal:batch[0]||incidentTerminals[0],batch:batch[1]||'',
+      count:checked.length,chequeNos:checked.map(id=>DB.cheques.find(c=>c.id===id)?.chequeNo||id).join(', '),
+      totalAmount:checked.reduce((s,id)=>{const c=DB.cheques.find(x=>x.id===id);return s+(c?.amount||0);},0),
+      reportedBy:CURRENT_USER.name||CURRENT_USER.username,
+      reportedAt:now,status:'open',resolvedBy:'',resolvedAt:'',notes:notes||'Cheque(s) reported missing'
+    });
+  }
+  saveDB();closeBatchModal();
   renderDashboard();renderBatches();
   toast(`Submitted ${checked.length} cheque(s) for verification`,'success');
+  if(action==='missing')toast('🚨 Incident created for missing cheques','info');
 }
 
 function verifyBatch(key,status){
@@ -799,7 +844,50 @@ function renderVerify(){
         <button class="btn btn-success btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','verified')">✅ Confirm</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','in_progress')">❌ Reject</button>
       </div>
-    </div>`).join('');
+    </div>`).join('');}
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 7b — INCIDENTS
+   ════════════════════════════════════════════════════════════ */
+function renderIncidents(){
+  const open=DB.incidents?.filter(i=>i.status==='open')||[];
+  const resolved=DB.incidents?.filter(i=>i.status==='resolved')||[];
+  const g=document.getElementById('incidentsGrid');
+  if(!g)return;
+  if(open.length===0 && resolved.length===0){g.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>No incidents</h3></div>`;return;}
+  let h='';
+  if(open.length>0){
+    h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--red)">🚨 Open Incidents (${open.length})</div><div class="batch-grid" style="margin-bottom:20px">`;
+    open.forEach(i=>{
+      h+=`<div style="background:var(--surface);border:1px solid var(--red);border-radius:var(--radius);padding:14px">
+        <div style="display:flex;justify-content:space-between"><strong>${esc(i.terminal)} · Batch ${esc(i.batch)}</strong><span class="status-badge" style="background:var(--red-bg);color:var(--red)">🚨 Open</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin:6px 0">${i.count} cheque(s) · ${fc(i.totalAmount)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Reported by ${esc(i.reportedBy)} · ${fd(i.reportedAt)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${esc(i.notes)} · Cheques: ${esc(i.chequeNos)}</div>
+        <button class="btn btn-success btn-xs" onclick="resolveIncident(${i.id})">✅ Resolve Incident</button>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+  if(resolved.length>0){
+    h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-muted)">✅ Resolved (${resolved.length})</div><div class="batch-grid">`;
+    resolved.slice(0,30).forEach(i=>{
+      h+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;opacity:0.6">
+        <div style="display:flex;justify-content:space-between;font-size:12px"><strong>${esc(i.terminal)}</strong><span style="font-size:10px;color:var(--text-muted)">${fd(i.resolvedAt)}</span></div>
+        <div style="font-size:11px;color:var(--text-muted)">${i.count} cheque(s) · ${esc(i.resolvedBy)}</div>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+  g.innerHTML=h;
+}
+function resolveIncident(id){
+  if(!confirm('Resolve this incident?'))return;
+  const i=DB.incidents?.find(x=>x.id===id);
+  if(!i)return;
+  i.status='resolved';i.resolvedBy=CURRENT_USER.name||CURRENT_USER.username;i.resolvedAt=new Date().toISOString();
+  saveDB();renderIncidents();renderDashboard();toast('Incident resolved','success');
 }
 
 /* ════════════════════════════════════════════════════════════

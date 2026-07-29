@@ -1238,6 +1238,44 @@ function renderSettingsJobs(){
   h+='<hr style="border-color:var(--border);margin:16px 0"><h3 style="font-size:14px;margin-bottom:6px;color:var(--red)"> Danger Zone</h3><p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Clear all cheques, batches, receipts. Preserves users, branches, customers.</p><button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Cheque Data</button>';
   document.getElementById('settingsContent').innerHTML=h;
 }
+
+// ─── Confirmation modal (type-to-confirm) ────────────
+function showConfirmModal({title,message,confirmText,onConfirm}){
+  const overlay=document.getElementById('modalOverlay');
+  const body=document.getElementById('modalBody');
+  const footer=document.getElementById('modalFooter');
+  document.getElementById('modalTitle').textContent=title||'Confirm';
+  body.innerHTML=`
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${message}</p>
+    <input id="confirmInput" placeholder='Type "${confirmText}" to confirm' style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;outline:none;color:var(--text);font-family:monospace" autocomplete="off">
+  `;
+  footer.innerHTML=`<button class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>`;
+  const btnOk=document.createElement('button');
+  btnOk.className='btn btn-danger';btnOk.textContent='Delete';btnOk.disabled=true;
+  btnOk.style.opacity='0.4';
+  footer.appendChild(btnOk);
+  overlay.style.display='flex';
+  document.getElementById('modalCard').style.maxWidth='420px';
+  setTimeout(()=>{
+    const input=document.getElementById('confirmInput');
+    if(input){
+      input.focus();
+      input.addEventListener('input',()=>{
+        const ok=input.value.trim()===confirmText;
+        btnOk.disabled=!ok;
+        btnOk.style.opacity=ok?'1':'0.4';
+        btnOk.style.cursor=ok?'pointer':'default';
+      });
+      input.addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!btnOk.disabled)btnOk.click();});
+    }
+  },50);
+  btnOk.onclick=()=>{
+    overlay.style.display='none';
+    if(onConfirm)onConfirm();
+  };
+}
+
+// ─── CREATE / DELETE Branch ─────────────────────────
 function createBranchFromSettings(){
   const name=document.getElementById('newBranchName').value.trim();
   if(!name||name==='Unassigned'){toast('Enter a branch name','error');return;}
@@ -1248,10 +1286,16 @@ function createBranchFromSettings(){
   renderSettingsJobs();toast(`Branch "${name}" created`,'success');
 }
 function deleteBranch(name){
-  if(!confirm(`Delete branch "${name}"?`))return;
-  DB.branches=(DB.branches||[]).filter(b=>b!==name);
-  Object.keys(DB.branchMap).forEach(t=>{if(DB.branchMap[t]===name)delete DB.branchMap[t];});
-  saveDB();renderSettingsJobs();
+  showConfirmModal({
+    title:`Delete "${name}"?`,
+    message:`This will unassign all terminals under "${name}". Type <strong>UNASSIGN BRANCH</strong> to confirm.`,
+    confirmText:'UNASSIGN BRANCH',
+    onConfirm:()=>{
+      DB.branches=(DB.branches||[]).filter(b=>b!==name);
+      Object.keys(DB.branchMap).forEach(t=>{if(DB.branchMap[t]===name)delete DB.branchMap[t];});
+      saveDB();renderSettingsJobs();
+    }
+  });
 }
 function moveTerminal(terminal,newBranch){
   if(!newBranch){delete DB.branchMap[terminal];}

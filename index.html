@@ -268,6 +268,12 @@ input,select,textarea,button{font:inherit;color:inherit}
 
     <!-- VERIFY -->
     <div class="page" id="page-verify">
+      <div class="filter-bar">
+        <input type="text" class="search" placeholder="Search location, batch..." id="verifySearch" oninput="renderVerify()">
+        <select id="verifyBranchFilter" onchange="renderVerify()"><option value="all">All Branches</option></select>
+        <input type="date" id="verifyDateFrom" onchange="renderVerify()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
+        <input type="date" id="verifyDateTo" onchange="renderVerify()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
+      </div>
       <div class="batch-grid" id="verifyGrid"></div>
     </div>
 
@@ -578,9 +584,11 @@ function renderDashboard(){
    MODULE 5 — BATCH MODAL (checkboxes + proof upload)
    ════════════════════════════════════════════════════════════ */
 let currentBatchKey = null;
+let _receiptUploaded = false;
 
 function openBatchModal(key){
   currentBatchKey = key;
+  _receiptUploaded = false;
   const all = getAllBatches();
   const batch = all.find(b=>b.key===key);
   if(!batch)return;
@@ -648,6 +656,10 @@ function openBatchModal(key){
         <option value="missing">❓ Missing</option>
         <option value="others">📝 Others</option>
       </select>
+    </div>
+    <div id="actionDateWrap_${receiptKey}">
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Action Date</label>
+      <input type="date" id="actionDate_${receiptKey}" value="${new Date().toISOString().split('T')[0]}" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:100%">
     </div>`;
     const isMiss='missing';
     html += `<div id="uploadArea_${receiptKey}">
@@ -695,6 +707,7 @@ function uploadBatchReceipt(e,key){
   reader.onload=function(ev){
     if(!DB.batchReceipts[key])DB.batchReceipts[key]=[];
     DB.batchReceipts[key].push({data:ev.target.result,fileName:file.name,uploadedAt:new Date().toISOString(),uploadedBy:CURRENT_USER.username});
+    _receiptUploaded=true;
     saveDB();
     openBatchModal(currentBatchKey);
     toast('Receipt uploaded','success');
@@ -722,14 +735,15 @@ function submitBatch(key){
   const receiptKey = key.split('|').join('_');
   const actionSel=document.getElementById('batchAction_'+receiptKey);
   const action=actionSel?.value||'bankin';
-  // Only require receipt if action is NOT missing
-  if(action!=='missing' && (!DB.batchReceipts[receiptKey]||DB.batchReceipts[receiptKey].length===0)){
-    toast('Upload a receipt before submitting','error');
+  // Require NEW receipt upload for Bank In / Return
+  if((action==='bankin'||action==='return') && !_receiptUploaded){
+    toast('Upload a NEW receipt before submitting','error');
     return;
   }
   const checked = [...document.querySelectorAll('.chk-cheque:checked')].map(el=>el.dataset.id);
   if(checked.length===0){toast('Check at least one cheque to submit','error');return;}
   const notes = document.getElementById('batchNotes')?.value||'';
+  const actionDate = document.getElementById('actionDate_'+receiptKey)?.value||new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
   let incidentTerminals=[];
   DB.cheques.forEach(c=>{
@@ -737,6 +751,7 @@ function submitBatch(key){
       c.status='awaiting_verification';
       c.jobType = (action==='bankin') ? 'bankin' : 'rejected';
       c.notes = notes||c.notes;
+      c.actionDate = actionDate;
       if(action==='return')c.rejectReason='Returned to customer';
       else if(action==='missing'){c.rejectReason='Cheque missing';if(!incidentTerminals.includes(c.terminal))incidentTerminals.push(c.terminal);}
       else if(action==='others')c.rejectReason=notes||'Others';
@@ -841,7 +856,24 @@ function renderBatches(){
    MODULE 7 — VERIFY PAGE
    ════════════════════════════════════════════════════════════ */
 function renderVerify(){
-  const batches=getAllBatches().filter(b=>b.status==='awaiting_verification');
+  let batches=getAllBatches().filter(b=>b.status==='awaiting_verification');
+  // Filters
+  const search=(document.getElementById('verifySearch')?.value||'').toLowerCase();
+  const bf=document.getElementById('verifyBranchFilter')?.value||'all';
+  const df=document.getElementById('verifyDateFrom')?.value,dt=document.getElementById('verifyDateTo')?.value;
+  // Populate branch filter
+  const bSel=document.getElementById('verifyBranchFilter');
+  if(bSel){
+    const branches=[...new Set(getAllBatches().map(b=>b.branch))].sort();
+    bSel.innerHTML='<option value="all">All Branches</option>'+branches.map(x=>`<option value="${x}">${x}</option>`).join('');
+    bSel.value=bf;
+  }
+  if(bf!=='all')batches=batches.filter(b=>b.branch===bf);
+  if(search)batches=batches.filter(b=>[b.terminal,b.batch,b.branch].some(x=>x.toLowerCase().includes(search)));
+  if(df||dt)batches=batches.filter(b=>{
+    const d=new Date(b.date);if(df&&d<new Date(df))return false;
+    if(dt){const e=new Date(dt);e.setDate(e.getDate()+1);if(d>e)return false;}return true;
+  });
   const grid=document.getElementById('verifyGrid');
   if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>Nothing to verify</h3></div>`;return;}
   grid.innerHTML=batches.map(b=>`
@@ -1153,17 +1185,7 @@ let settingsTab=0;
 
 function renderSettings(){
   if(!hasRole(ROLE.SITE_ADMIN)){document.getElementById('settingsPageContent').innerHTML='';return;}
-  const tabs=[
-    {id:'s-users',label:'👥 User Administration'},
-    {id:'s-customers',label:'🏭 Customer Profiling'},
-    {id:'s-jobs',label:'🏢 Job Profiling'}
-  ];
-  let h='<div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px">';
-  tabs.forEach((t,i)=>{const a=i===settingsTab?'btn-primary':'btn-secondary';
-    h+=`<button class="btn btn-sm ${a}" onclick="switchSettingsTab(${i})">${t.label}</button>`;});
-  h+='</div><div id="settingsContent"></div>';
-  document.getElementById('settingsPageContent').innerHTML=h;
-  // Render current tab content directly (NO recursion)
+  document.getElementById('settingsPageContent').innerHTML='<div id="settingsContent"></div>';
   if(settingsTab===0)renderSettingsUsers();
   else if(settingsTab===1)renderSettingsCustomers();
   else renderSettingsJobs();
@@ -1185,7 +1207,8 @@ function renderSettingsUsers(){
   c.innerHTML=h;
 }
 function renderSettingsCustomers(){
-  const custs=DB.customers||[],terms=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
+  if(!DB.customers)DB.customers=[];if(!DB.customerMap)DB.customerMap={};
+  const custs=DB.customers,terms=[...new Set(DB.cheques.map(c=>c.terminal))].filter(Boolean).sort();
   let h='<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center"><input id="newCustomerInput" placeholder="Customer name" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;outline:none;flex:1;color:var(--text)"><button class="btn btn-sm btn-primary" onclick="createCustomerFromSettings()">+ Add Customer</button></div>';
   if(custs.length>0){
     h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">';

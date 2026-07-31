@@ -277,6 +277,15 @@ input,select,textarea,button{font:inherit;color:inherit}
       <div class="batch-grid" id="verifyGrid"></div>
     </div>
 
+    <!-- CHEQUE TIMELINE SEARCH -->
+    <div class="page" id="page-cheque-search">
+      <div class="filter-bar">
+        <input type="text" class="search" placeholder="Search cheque number..." id="chequeSearchInput" oninput="renderChequeSearch()" style="flex:2">
+        <input type="text" class="search" placeholder="Search location / batch / customer..." id="chequeSearchRef" oninput="renderChequeSearch()" style="flex:2">
+      </div>
+      <div id="chequeSearchResults"></div>
+    </div>
+
     <!-- REPORT -->
     <div class="page" id="page-history">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
@@ -466,6 +475,7 @@ const NAV_ITEMS = [
   {id:'batches',label:'Reconcile Cheques',icon:'📋',roles:['*']},
   {id:'verify',label:'Verification',icon:'✅',roles:['site_admin','process_admin','verifier']},
   {id:'history',label:'Report',icon:'📜',roles:['*']},
+  {id:'cheque-search',label:'Cheque Timeline',icon:'🔍',roles:['*']},
   {id:'import',label:'Import PDF',icon:'📥',roles:['site_admin','process_admin']},
   {id:'incidents',label:'Incidents',icon:'🚨',roles:['site_admin','process_admin','verifier']},
   {type:'sep',label:'— Settings —',roles:['site_admin']},
@@ -520,6 +530,7 @@ function switchPage(id){
   if(id==='batches')renderBatches();
   if(id==='verify')renderVerify();
   if(id==='history'){renderHistory();renderReportBuilder();}
+  if(id==='cheque-search')renderChequeSearch();
   if(id==='import'){}
   if(id==='incidents')renderIncidents();
 }
@@ -707,9 +718,14 @@ function uploadBatchReceipt(e,key){
   reader.onload=function(ev){
     if(!DB.batchReceipts[key])DB.batchReceipts[key]=[];
     DB.batchReceipts[key].push({data:ev.target.result,fileName:file.name,uploadedAt:new Date().toISOString(),uploadedBy:CURRENT_USER.username});
+    // Preserve checkbox selection across re-render
+    const checked=[...document.querySelectorAll('.chk-cheque:checked')].map(el=>el.dataset.id);
     _receiptUploaded=true;
     saveDB();
     openBatchModal(currentBatchKey);
+    // Restore selection
+    checked.forEach(id=>{const el=document.querySelector('.chk-cheque[data-id="'+id+'"]');if(el)el.checked=true;});
+    _receiptUploaded=true; // openBatchModal resets it — re-set
     toast('Receipt uploaded','success');
   };
   reader.readAsDataURL(file);
@@ -891,43 +907,149 @@ function renderVerify(){
    MODULE 7b — INCIDENTS
    ════════════════════════════════════════════════════════════ */
 function renderIncidents(){
-  const open=DB.incidents?.filter(i=>i.status==='open')||[];
+  const active=DB.incidents?.filter(i=>i.status==='open'||i.status==='in_progress')||[];
   const resolved=DB.incidents?.filter(i=>i.status==='resolved')||[];
   const g=document.getElementById('incidentsGrid');
   if(!g)return;
-  if(open.length===0 && resolved.length===0){g.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>No incidents</h3></div>`;return;}
+  if(active.length===0 && resolved.length===0){g.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>No incidents</h3></div>`;return;}
   let h='';
-  if(open.length>0){
-    h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--red)">🚨 Open Incidents (${open.length})</div><div class="batch-grid" style="margin-bottom:20px">`;
-    open.forEach(i=>{
-      h+=`<div style="background:var(--surface);border:1px solid var(--red);border-radius:var(--radius);padding:14px">
-        <div style="display:flex;justify-content:space-between"><strong>${esc(i.terminal)} · Batch ${esc(i.batch)}</strong><span class="status-badge" style="background:var(--red-bg);color:var(--red)">🚨 Open</span></div>
-        <div style="font-size:12px;color:var(--text-muted);margin:6px 0">${i.count} cheque(s) · ${fc(i.totalAmount)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">Reported by ${esc(i.reportedBy)} · ${fd(i.reportedAt)}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${esc(i.notes)} · Cheques: ${esc(i.chequeNos)}</div>
-        <button class="btn btn-success btn-xs" onclick="resolveIncident(${i.id})">✅ Resolve Incident</button>
-      </div>`;
-    });
+  if(active.length>0){
+    h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--red)">🚨 Active Incidents (${active.length})</div><div class="batch-grid" style="margin-bottom:20px">`;
+    active.forEach(i=>{h+=incidentCard(i);});
     h+=`</div>`;
   }
   if(resolved.length>0){
     h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-muted)">✅ Resolved (${resolved.length})</div><div class="batch-grid">`;
-    resolved.slice(0,30).forEach(i=>{
-      h+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;opacity:0.6">
-        <div style="display:flex;justify-content:space-between;font-size:12px"><strong>${esc(i.terminal)}</strong><span style="font-size:10px;color:var(--text-muted)">${fd(i.resolvedAt)}</span></div>
-        <div style="font-size:11px;color:var(--text-muted)">${i.count} cheque(s) · ${esc(i.resolvedBy)}</div>
-      </div>`;
-    });
+    resolved.slice(0,30).forEach(i=>{h+=incidentCard(i,true);});
     h+=`</div>`;
   }
   g.innerHTML=h;
 }
-function resolveIncident(id){
-  if(!confirm('Resolve this incident?'))return;
-  const i=DB.incidents?.find(x=>x.id===id);
-  if(!i)return;
-  i.status='resolved';i.resolvedBy=CURRENT_USER.name||CURRENT_USER.username;i.resolvedAt=new Date().toISOString();
+
+function incidentCard(i,isResolved){
+  const canManage=hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN)||hasRole(ROLE.VERIFIER);
+  const badge=i.status==='resolved'
+    ?'<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--green-bg);color:var(--green)">✅ Resolved</span>'
+    :(i.status==='in_progress'
+      ?'<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--blue-bg);color:var(--blue)">🔍 In Progress</span>'
+      :'<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--red-bg);color:var(--red)">🚨 Open</span>');
+  let actions='';
+  if(!isResolved&&canManage){
+    if(i.status==='open')actions+=`<button class="btn btn-primary btn-xs" onclick="acceptIncident(${i.id})">✅ Accept</button> `;
+    if(i.status==='in_progress'&&!i.assignedTo)actions+=`<button class="btn btn-secondary btn-xs" onclick="assignIncidentPrompt(${i.id})">👤 Assign</button> `;
+    if(i.status==='in_progress')actions+=`<button class="btn btn-secondary btn-xs" onclick="investigateIncidentPrompt(${i.id})">🔍 Investigate</button> `;
+    if(i.status==='in_progress')actions+=`<button class="btn btn-success btn-xs" onclick="resolveIncidentPrompt(${i.id})">✅ Resolve</button>`;
+  }
+  const tl=(i.timeline||[]).map(t=>`
+    <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">
+      <span style="white-space:nowrap;color:var(--text-muted)">${fd(t.at)}</span>
+      <span style="color:var(--accent);font-weight:600;white-space:nowrap">${esc(t.action)}</span>
+      <span style="flex:1;color:var(--text-muted)">${esc(t.note||'')} <span style="color:var(--text-muted);opacity:.7">— ${esc(t.by)}</span></span>
+    </div>`).join('');
+  return `<div style="background:var(--surface);border:1px solid ${isResolved?'var(--border)':'var(--red)'};border-radius:var(--radius);padding:14px;${isResolved?'opacity:.65':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><strong>${esc(i.terminal)} · Batch ${esc(i.batch)}</strong>${badge}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">${i.count} cheque(s) · ${fc(i.totalAmount)} · Cheques: ${esc(i.chequeNos)}</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${esc(i.notes)}</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
+      ${i.acceptedBy?`✅ Accepted: ${esc(i.acceptedBy)} (${fd(i.acceptedAt)})<br>`:''}
+      ${i.assignedTo?`👤 Assigned: ${esc(i.assignedTo)} (${fd(i.assignedAt)})<br>`:''}
+      ${i.resolvedBy?`🏁 Outcome: ${esc(i.outcome||'')} — by ${esc(i.resolvedBy)} (${fd(i.resolvedAt)})`:''}
+    </div>
+    ${tl?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;max-height:160px;overflow-y:auto">${tl}</div>`:''}
+    ${actions?`<div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div>`:''}
+  </div>`;
+}
+
+function incidentLog(i,action,note){
+  i.timeline=i.timeline||[];
+  i.timeline.push({at:new Date().toISOString(),by:CURRENT_USER.name||CURRENT_USER.username,action,note});
+}
+
+function acceptIncident(id){
+  const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
+  i.status='in_progress';i.acceptedBy=CURRENT_USER.name||CURRENT_USER.username;i.acceptedAt=new Date().toISOString();
+  incidentLog(i,'Accepted','Incident accepted for investigation');
+  saveDB();renderIncidents();renderDashboard();toast('Incident accepted','success');
+}
+
+function assignIncidentPrompt(id){
+  const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
+  const users=DB.users.filter(u=>u.roles.includes(ROLE.VERIFIER)||u.roles.includes(ROLE.PROCESS_ADMIN)).map(u=>u.name||u.username);
+  if(users.length===0){toast('No verifier/process admin users to assign','error');return;}
+  const input=prompt('Assign incident to:',users[0]);
+  if(!input)return;
+  i.assignedTo=input;i.assignedAt=new Date().toISOString();
+  incidentLog(i,'Assigned','Assigned to '+input);
+  saveDB();renderIncidents();toast('Incident assigned','success');
+}
+
+function investigateIncidentPrompt(id){
+  const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
+  const note=prompt('Investigation notes / findings:');
+  if(note===null)return;
+  incidentLog(i,'Investigation',note||'No notes added');
+  saveDB();renderIncidents();toast('Investigation updated','success');
+}
+
+function resolveIncidentPrompt(id){
+  const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
+  const outcome=prompt('Outcome of investigation:');
+  if(outcome===null)return;
+  i.status='resolved';i.resolvedBy=CURRENT_USER.name||CURRENT_USER.username;i.resolvedAt=new Date().toISOString();i.outcome=outcome;
+  incidentLog(i,'Resolved',outcome||'Resolved');
   saveDB();renderIncidents();renderDashboard();toast('Incident resolved','success');
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODULE 7c — CHEQUE TIMELINE SEARCH
+   ════════════════════════════════════════════════════════════ */
+function renderChequeSearch(){
+  const wrap=document.getElementById('chequeSearchResults');
+  const q=(document.getElementById('chequeSearchInput')?.value||'').trim();
+  const q2=(document.getElementById('chequeSearchRef')?.value||'').trim().toLowerCase();
+  if(!q&&!q2){wrap.innerHTML=`<div class="empty-state"><div class="icon">🔍</div><h3>Enter a cheque number to view its timeline</h3></div>`;return;}
+  let matches=(DB.cheques||[]).filter(c=>{
+    if(q&&!(c.chequeNo||'').toLowerCase().includes(q.toLowerCase()))return false;
+    if(q2&&![c.terminal,c.batch,(DB.customerMap?.[c.terminal]||''),c.tran].some(x=>(x||'').toLowerCase().includes(q2)))return false;
+    return true;
+  });
+  if(matches.length===0){wrap.innerHTML=`<div class="empty-state"><div class="icon">❌</div><h3>No cheque found</h3></div>`;return;}
+  matches=matches.slice(0,50);
+  let h='<div class="batch-grid">';
+  matches.forEach(c=>{h+=chequeTimelineCard(c);});
+  h+='</div>';
+  wrap.innerHTML=h;
+}
+
+function chequeTimelineCard(c){
+  const customer=DB.customerMap?.[c.terminal]||'—';
+  const actionLabel={bankin:'🏦 Bank In',rejected:'🔴 Return / Rejected'}[c.jobType]||(c.rejectReason||'Pending');
+  const closed=c.status==='closed'||c.status==='verified';
+  const statusColor=closed?'var(--green)':(c.status==='awaiting_verification'?'var(--blue)':'var(--amber)');
+  const items=[
+    {d:c.issueDate||'—',l:'📥 Cheque collected',n:c.terminal},
+    {d:c.createdAt?fd(c.createdAt):'—',l:'🖥️ Uploaded into ChequeSense',n:c.chequeNo},
+    {d:c.actionDate?fd(c.actionDate):(c.updatedAt?fd(c.updatedAt):'—'),l:actionLabel,n:c.jobType==='rejected'?(c.rejectReason||''):(c.notes||'')},
+    {d:c.verifiedAt?fd(c.verifiedAt):'—',l:'✅ Verified',n:c.verifiedBy?('by '+c.verifiedBy):''}
+  ];
+  const tl=items.map(x=>`
+    <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <span style="white-space:nowrap;color:var(--text-muted);min-width:110px">${x.d}</span>
+      <span style="color:var(--text);font-weight:600;min-width:170px">${x.l}</span>
+      <span style="color:var(--text-muted);flex:1">${esc(x.n||'')}</span>
+    </div>`).join('');
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong>${esc(c.chequeNo||c.tran||'—')}</strong>
+      <span style="font-size:11px;color:var(--text-muted)">${esc(c.terminal)} · ${esc(customer)}</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:var(--text-muted)">${fc(c.amount)}</span>
+      <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:${statusColor};font-weight:600">${(c.status||'pending').replace(/_/g,' ')}</span>
+      <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:var(--text-muted)">${closed?'✔️ Flow closed':'⏳ Pending'}</span>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px">${tl}</div>
+  </div>`;
 }
 
 /* ════════════════════════════════════════════════════════════

@@ -1399,9 +1399,9 @@ function renderSettingsCustomers(){
     h+='</div></div>';
   }
   custs.forEach(c=>{
-    const terms=terms.filter(t=>(DB.customerMap||{})[t]===c);
-    if(terms.length===0)return;
-    h+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden"><div style="background:var(--surface2);padding:6px 12px;font-size:12px;font-weight:600">🏭 ${esc(c)} (${terms.length})</div><div style="padding:4px 12px">${terms.map(t=>`<div style="padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)">${esc(t)}</div>`).join('')}</div></div>`;
+    const cTerms=terms.filter(t=>(DB.customerMap||{})[t]===c);
+    if(cTerms.length===0)return;
+    h+=`<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden"><div style="background:var(--surface2);padding:6px 12px;font-size:12px;font-weight:600">🏭 ${esc(c)} (${cTerms.length})</div><div style="padding:4px 12px">${cTerms.map(t=>`<div style="padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)">${esc(t)}</div>`).join('')}</div></div>`;
   });
   document.getElementById('settingsContent').innerHTML=h;
 }

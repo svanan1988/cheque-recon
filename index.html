@@ -256,6 +256,12 @@ input,select,textarea,button{font:inherit;color:inherit}
           <span class="status-pill" data-s="closed" onclick="toggleStatusPill(this)"> Closed</span>
         </div>
         <select id="branchFilter2" onchange="renderBatches()"><option value="all">All Branches</option></select>
+        <select id="typeFilter2" onchange="renderBatches()">
+          <option value="all">All Types</option>
+          <option value="bankin">🏦 Bank In</option>
+          <option value="rejected">🔴 Return</option>
+          <option value="mixed">🔀 Mixed</option>
+        </select>
         <input type="date" id="reconDateFrom" onchange="renderBatches()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
         <input type="date" id="reconDateTo" onchange="renderBatches()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
       </div>
@@ -433,7 +439,7 @@ function getAllBatches(){
     g.status = batchStatus(g.cheques);
     g.receiptKey = g.terminal+'_'+g.batch;
     g.hasReceipt = DB.batchReceipts[g.receiptKey]?.length > 0;
-    g.type = g.cheques.every(c=>c.jobType==='rejected') ? 'rejected' : 'bankin';
+    g.type = g.cheques.every(c=>c.jobType==='rejected') ? 'rejected' : (g.cheques.some(c=>c.jobType==='rejected') ? 'mixed' : 'bankin');
     g.date = g.cheques[0]?.issueDate || g.cheques[0]?.createdAt?.split('T')[0] || '—';
     return g;
   });
@@ -878,8 +884,10 @@ function renderBatches(){
   if(activePills.length>0)batches=batches.filter(b=>activePills.includes(b.status));
   const search=(document.getElementById('batchSearch')?.value||'').toLowerCase();
   const bf=document.getElementById('branchFilter2')?.value||'all';
+  const tf=document.getElementById('typeFilter2')?.value||'all';
   batches=batches.filter(b=>{
     if(bf!=='all'&&b.branch!==bf)return false;
+    if(tf!=='all'&&b.type!==tf)return false;
     if(search&&![b.terminal,b.batch,b.branch].some(x=>x.toLowerCase().includes(search)))return false;
     return true;
   });
@@ -904,7 +912,7 @@ function renderBatches(){
       </div>
       <div style="display:flex;gap:6px;margin:6px 0 8px;flex-wrap:wrap">
         <span class="status-badge ${b.status}"><span class="status-dot ${b.status}"></span>${STATUS[b.status]||b.status}</span>
-        <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:${b.type==='rejected'?'var(--red-bg)':'var(--surface2)'};color:${b.type==='rejected'?'var(--red)':'var(--text-muted)'};font-weight:600">${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:${b.type==='rejected'?'var(--red-bg)':(b.type==='mixed'?'var(--amber-bg)':'var(--surface2)')};color:${b.type==='rejected'?'var(--red)':(b.type==='mixed'?'var(--amber)':'var(--text-muted)')};font-weight:600">${b.type==='rejected'?'🔴 Return':(b.type==='mixed'?'🔀 Mixed':'🏦 Bank-In')}</span>
       </div>
       <div class="meta"><span>📍 ${esc(b.branch)}</span><span>📄 ${b.count} cheques</span>${b.hasReceipt?'<span>📎 Receipt</span>':''}</div>
     </div>`).join('');
@@ -938,7 +946,7 @@ function renderVerify(){
     <div class="batch-card" onclick="openBatchModal('${b.key}')">
       <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)} · ${b.date}</div></div>
         <div class="total-amt">${fc(b.total)}</div></div>
-      <div class="meta"><span>📄 ${b.count} cheques</span><span>${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</span><span>📎 ${b.hasReceipt?'Receipt uploaded':'No receipt'}</span></div>
+      <div class="meta"><span>📄 ${b.count} cheques</span><span>${b.type==='rejected'?'🔴 Return':(b.type==='mixed'?'🔀 Mixed':'🏦 Bank-In')}</span><span>📎 ${b.hasReceipt?'Receipt uploaded':'No receipt'}</span></div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-success btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','verified')">✅ Confirm</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','in_progress')">❌ Reject</button>
@@ -1104,7 +1112,7 @@ function renderHistory(){
   let html=`<table><thead><tr><th>Location</th><th>Date</th><th>Batch</th><th>Type</th><th>Cheques</th><th>Total</th><th>Receipt</th><th>Verified By</th><th>Status</th></tr></thead><tbody>`;
   closed.sort((a,b)=>new Date(b.cheques[0]?.updatedAt)-new Date(a.cheques[0]?.updatedAt)).forEach(b=>{
     const v=b.cheques.find(c=>c.verifiedBy);
-    html+=`<tr><td><strong>${esc(b.terminal)}</strong></td><td style="font-size:11px">${b.date}</td><td>${esc(b.batch)}</td><td>${b.type==='rejected'?'🔴 Return':'🏦 Bank-In'}</td><td>${b.count}</td>
+    html+=`<tr><td><strong>${esc(b.terminal)}</strong></td><td style="font-size:11px">${b.date}</td><td>${esc(b.batch)}</td><td>${b.type==='rejected'?'🔴 Return':(b.type==='mixed'?'🔀 Mixed':'🏦 Bank-In')}</td><td>${b.count}</td>
       <td>${fc(b.total)}</td><td>${b.hasReceipt?'📎 Yes':'—'}</td>
       <td>${esc(v?.verifiedBy||'—')}</td>
       <td><span class="status-badge ${b.status}">${STATUS[b.status]||b.status}</span></td></tr>`;

@@ -1,11 +1,26 @@
 # ChequeSense — Change Log
 
 > Reference document. Each version lists: reported issues → what was fixed.
-> Latest first.
+> Latest first. **Version scheme: 0.x.x-alpha (pre-release).**
 
 ---
 
-## v2.6 — 2026-07-29 (Incident Workflow + Cheque Timeline)
+## v0.3.0-alpha — 2026-07-31 (Perf Fix + Per-Cheque Verify)
+
+**Issues reported:**
+1. Document upload at Reconciliation "freezes" — nothing seems to happen, but repeated clicks duplicate receipts.
+2. Verification cannot verify/reject individual cheques — whole batch only.
+3. Confirm in Verification seems unresponsive — after refresh the batch shows confirmed.
+
+**Fixed:**
+- **Root cause (all 3):** every receipt upload / verify action rebuilt the ENTIRE modal → heavy, froze visually, and duplicated on retry.
+- Receipt upload now updates **only the receipt section in place** (`renderReceiptList`) — cheque checkboxes and focus preserved, no modal rebuild.
+- Verification modal now shows per-cheque checkboxes with **✅ Verify Selected / ❌ Reject Selected** — accept/reject individual entries.
+- Version label shown in sidebar (`ChequeSense v0.3.0-alpha`).
+
+---
+
+## v0.2.0-alpha — 2026-07-29 (Incident Workflow + Cheque Timeline)
 
 **Issues reported:**
 1. Settings pages (User Admin / Customer Profile / Job Profile) appear empty.

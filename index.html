@@ -192,6 +192,7 @@ input,select,textarea,button{font:inherit;color:inherit}
       <span class="role-badge" id="sideRoleBadge"></span>
       <button class="btn btn-danger btn-xs" onclick="doLogout()" style="width:100%;margin-top:6px">🚪 Sign Out</button>
       <button class="btn btn-secondary btn-xs" onclick="showChangePassword()" style="width:100%;margin-top:4px">🔑 Change Password</button>
+      <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-top:8px;opacity:.6" id="versionLabel"></div>
     </div>
   </aside>
 
@@ -455,6 +456,7 @@ function doLogin(e){
 function enterApp(){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appLayout').classList.add('open');
+  const vl=document.getElementById('versionLabel');if(vl)vl.textContent='ChequeSense v'+MODULE_VER;
   buildSidebar();
   switchPage('dashboard');
 }
@@ -615,46 +617,42 @@ function openBatchModal(key){
 
   document.getElementById('modalTitle').textContent = `📋 ${batch.terminal} · Batch ${batch.batch} · ${batch.date}`;
 
-  const chequeTable = batch.cheques.map((c,i)=>`
+  const isVerifyMode = canVerify && batch.status==='awaiting_verification';
+  const showChecks = (canSubmit&&(batch.status==='pending'||batch.status==='in_progress')) || isVerifyMode;
+  const chequeTable = batch.cheques.map((c,i)=>{
+    const defChecked = isVerifyMode?'checked':(c.status!=='pending'?'checked':'');
+    return `
     <tr>
-      ${canSubmit&&(c.status==='pending'||c.status==='in_progress')?
-        `<td><input type="checkbox" class="chk-cheque" data-id="${c.id}" ${c.status!=='pending'?'checked':''}></td>`:''}
+      ${showChecks?
+        `<td><input type="checkbox" class="chk-cheque" data-id="${c.id}" ${defChecked}></td>`:''}
       <td>${i+1}</td>
       <td>${esc(c.chequeNo||'—')}</td>
       <td>${fc(c.amount)}</td>
       <td>${c.jobType==='rejected'?'<span style="color:var(--red)">Return</span>':'Bank-In'}</td>
       <td><span class="status-badge ${c.status}">${STATUS[c.status]||c.status}</span></td>
       ${c.rejectReason?`<td style="color:var(--red);font-size:11px">${esc(c.rejectReason.slice(0,30))}</td>`:''}
-    </tr>`).join('');
+    </tr>`;}).join('');
 
   let html = `
     <div style="margin-bottom:12px;font-size:13px">
       <strong>${batch.count} cheques</strong> · Total ${fc(batch.total)} · Branch: ${esc(batch.branch)}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      ${canSubmit&&(batch.status==='pending'||batch.status==='in_progress')?
+      ${showChecks?
         `<button class="btn btn-primary btn-xs" onclick="document.querySelectorAll('.chk-cheque').forEach(c=>c.checked=true)">☑ Select All</button>
          <button class="btn btn-secondary btn-xs" onclick="document.querySelectorAll('.chk-cheque').forEach(c=>c.checked=false)">☐ Clear All</button>`:''}
     </div>
     <div class="table-wrap" style="margin-bottom:14px;max-height:300px">
       <table><thead><tr>
-        ${canSubmit&&(batch.status==='pending'||batch.status==='in_progress')?'<th style="width:30px"></th>':''}
+        ${showChecks?'<th style="width:30px"></th>':''}
         <th>#</th><th>Cheque No</th><th>Amount</th><th>Type</th><th>Status</th>
         ${batch.cheques.some(c=>c.rejectReason)?'<th>Reason</th>':''}
       </tr></thead><tbody>${chequeTable}</tbody></table>
     </div>`;
 
-  // Receipt section (multiple)
-  let receiptHtml='';
-  receiptArr.forEach((r,i)=>{
-    receiptHtml+=`<div style="margin-bottom:6px;position:relative">
-      <img src="${r.data}" alt="Receipt" style="max-width:100%;max-height:120px;border-radius:6px;display:block;background:#000;cursor:pointer" onclick="window.open('${r.data}')">
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${esc(r.fileName)} · ${fd(r.uploadedAt)}</div>
-      ${(canSubmit||canVerify)?`<button class="btn btn-danger btn-xs" style="position:absolute;top:4px;right:4px" onclick="removeBatchReceipt('${receiptKey}',${i})">✕</button>`:''}
-    </div>`;
-  });
+  // Receipt section (in-place updatable — does NOT re-render the cheque table)
   html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
-    <h4 style="font-size:13px;margin-bottom:8px">📎 Batch Receipt (${receiptArr.length})</h4>${receiptHtml}`;
+    <div id="receiptList_${receiptKey}"></div>`;
   
   if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
     // Action selector with live toggle for Missing
@@ -674,16 +672,16 @@ function openBatchModal(key){
     </div>`;
     const isMiss='missing';
     html += `<div id="uploadArea_${receiptKey}">
-      <button class="btn btn-sm ${hasReceipt?'btn-success':'btn-secondary'}" onclick="triggerReceiptUpload('${receiptKey}')" style="cursor:pointer">
+      <button class="btn btn-sm ${hasReceipt?'btn-success':'btn-secondary'}" id="uploadBtn_${receiptKey}" onclick="triggerReceiptUpload('${receiptKey}')" style="cursor:pointer">
         ${hasReceipt?'✅ Add Another Receipt':'📁 Upload Receipt'}
       </button>
       <input type="file" id="receiptInput_${receiptKey}" accept="image/*,.pdf" style="display:none" onchange="uploadBatchReceipt(event,'${receiptKey}')">
-      <div style="font-size:11px;color:${hasReceipt?'var(--green)':'var(--text-muted)'};margin-top:4px">
+      <div style="font-size:11px;color:${hasReceipt?'var(--green)':'var(--text-muted)'};margin-top:4px" id="uploadHint_${receiptKey}">
         ${hasReceipt?'Receipts ready for submission':'* Receipt required unless action is "Missing"'}
       </div>
     </div>`;
   }
-  if(hasReceipt && (canSubmit||canVerify)) html += `<button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="if(confirm('Remove all receipts?')){delete DB.batchReceipts['${receiptKey}'];saveDB();openBatchModal(currentBatchKey)}">🗑 Remove All</button>`;
+  html += `<div id="removeAllWrap_${receiptKey}" style="display:${hasReceipt?'':'none'}"><button class="btn btn-danger btn-xs" style="margin-top:6px" onclick="removeAllReceipts('${receiptKey}')">🗑 Remove All</button></div>`;
   html += `</div>`;
 
   // Notes
@@ -691,6 +689,7 @@ function openBatchModal(key){
     <textarea class="notes-textarea" id="batchNotes" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:50px;outline:none">${batch.cheques[0]?.notes||''}</textarea></div>`;
 
   document.getElementById('modalBody').innerHTML = html;
+  renderReceiptList(receiptKey);
 
   // Footer buttons
   let footerHtml = `<button class="btn btn-secondary" onclick="closeBatchModal()">Close</button>`;
@@ -698,11 +697,41 @@ function openBatchModal(key){
     footerHtml += `<button class="btn btn-primary" onclick="submitBatch('${key}')">✅ Submit Selected</button>`;
   }
   if(canVerify && batch.status==='awaiting_verification'){
-    footerHtml += `<button class="btn btn-success" onclick="verifyBatch('${key}','verified')">✅ Confirm All</button>`;
-    footerHtml += `<button class="btn btn-danger" onclick="verifyBatch('${key}','in_progress')">❌ Reject All</button>`;
+    footerHtml += `<button class="btn btn-success" onclick="verifySelected('verified')">✅ Verify Selected</button>`;
+    footerHtml += `<button class="btn btn-danger" onclick="verifySelected('in_progress')">❌ Reject Selected</button>`;
   }
   document.getElementById('modalFooter').innerHTML = footerHtml;
   document.getElementById('batchModal').classList.add('open');
+}
+
+// In-place receipt list render (no full modal rebuild → checkboxes & focus preserved)
+function renderReceiptList(key){
+  const box=document.getElementById('receiptList_'+key);
+  if(!box)return;
+  const arr=DB.batchReceipts[key]||[];
+  const canSubmit=hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN)||hasRole(ROLE.USER);
+  const canVerify=hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN)||hasRole(ROLE.VERIFIER);
+  let h='<h4 style="font-size:13px;margin-bottom:8px">📎 Batch Receipt ('+arr.length+')</h4>';
+  arr.forEach((r,i)=>{
+    h+='<div style="margin-bottom:6px;position:relative">'
+      +'<img src="'+r.data+'" alt="Receipt" style="max-width:100%;max-height:120px;border-radius:6px;display:block;background:#000;cursor:pointer" onclick="window.open(\''+r.data+'\')">'
+      +'<div style="font-size:10px;color:var(--text-muted);margin-top:2px">'+esc(r.fileName)+' · '+fd(r.uploadedAt)+'</div>'
+      +((canSubmit||canVerify)?'<button class="btn btn-danger btn-xs" style="position:absolute;top:4px;right:4px" onclick="removeBatchReceipt(\''+key+'\','+i+')">✕</button>':'')
+      +'</div>';
+  });
+  box.innerHTML=h;
+  const btn=document.getElementById('uploadBtn_'+key);
+  const hint=document.getElementById('uploadHint_'+key);
+  const rm=document.getElementById('removeAllWrap_'+key);
+  if(btn){btn.textContent=arr.length?'✅ Add Another Receipt':'📁 Upload Receipt';btn.className='btn btn-sm '+(arr.length?'btn-success':'btn-secondary');}
+  if(hint){hint.textContent=arr.length?'Receipts ready for submission':'* Receipt required unless action is "Missing"';hint.style.color=arr.length?'var(--green)':'var(--text-muted)';}
+  if(rm)rm.style.display=arr.length?'':'none';
+}
+
+function removeAllReceipts(key){
+  if(!confirm('Remove all receipts for this batch?'))return;
+  delete DB.batchReceipts[key];
+  saveDB();renderReceiptList(key);
 }
 
 function closeBatchModal(){document.getElementById('batchModal').classList.remove('open');currentBatchKey=null;}
@@ -718,14 +747,9 @@ function uploadBatchReceipt(e,key){
   reader.onload=function(ev){
     if(!DB.batchReceipts[key])DB.batchReceipts[key]=[];
     DB.batchReceipts[key].push({data:ev.target.result,fileName:file.name,uploadedAt:new Date().toISOString(),uploadedBy:CURRENT_USER.username});
-    // Preserve checkbox selection across re-render
-    const checked=[...document.querySelectorAll('.chk-cheque:checked')].map(el=>el.dataset.id);
     _receiptUploaded=true;
     saveDB();
-    openBatchModal(currentBatchKey);
-    // Restore selection
-    checked.forEach(id=>{const el=document.querySelector('.chk-cheque[data-id="'+id+'"]');if(el)el.checked=true;});
-    _receiptUploaded=true; // openBatchModal resets it — re-set
+    renderReceiptList(key); // in-place — cheque selections & focus preserved
     toast('Receipt uploaded','success');
   };
   reader.readAsDataURL(file);
@@ -737,7 +761,7 @@ function removeBatchReceipt(key,idx){
   if(idx!==undefined)DB.batchReceipts[key].splice(idx,1);
   else delete DB.batchReceipts[key];
   if(DB.batchReceipts[key]?.length===0)delete DB.batchReceipts[key];
-  saveDB();openBatchModal(currentBatchKey);
+  saveDB();renderReceiptList(key);
 }
 
 function toggleUploadForAction(key){
@@ -791,6 +815,24 @@ function submitBatch(key){
   renderDashboard();renderBatches();
   toast(`Submitted ${checked.length} cheque(s) for verification`,'success');
   if(action==='missing')toast('🚨 Incident created for missing cheques','info');
+}
+
+function verifySelected(status){
+  const checked=[...document.querySelectorAll('.chk-cheque:checked')].map(el=>el.dataset.id);
+  if(checked.length===0){toast('Check at least one cheque first','error');return;}
+  let n=0;
+  DB.cheques.forEach(c=>{
+    if(checked.includes(c.id)&&(c.status==='awaiting_verification'||c.status==='verified')){
+      c.status=status;
+      if(status==='verified'){c.verifiedBy=CURRENT_USER.name||CURRENT_USER.username;c.verifiedAt=new Date().toISOString();}
+      c.updatedAt=new Date().toISOString();n++;
+    }
+  });
+  if(n===0){toast('No eligible cheques selected','error');return;}
+  saveDB();
+  closeBatchModal();
+  renderDashboard();renderVerify();
+  toast(status==='verified'?`✅ ${n} cheque(s) verified`:`↩️ ${n} cheque(s) returned`,'success');
 }
 
 function verifyBatch(key,status){
@@ -1302,7 +1344,7 @@ function doChangePassword(){
   saveDB();closeBatchModal();toast('Password updated','success');
 }
 
-const MODULE_VER = '2.0';
+const MODULE_VER = '0.3.0-alpha';
 let settingsTab=0;
 
 function renderSettings(){

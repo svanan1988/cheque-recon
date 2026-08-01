@@ -5,6 +5,19 @@
 
 ---
 
+## v0.3.1-alpha — 2026-08-01 (Settings TDZ Fix + Type Filter)
+
+**Issues reported:**
+1. Job Profiling loads → click Customer Profiling → empty → Job Profiling again still empty.
+2. No way to filter Reconcile Cheques by cheque type; reject cheques invisible.
+
+**Fixed:**
+- **Root cause:** JS Temporal Dead Zone bug in `renderSettingsCustomers()` — `const terms=terms.filter(...)` shadowed the outer `terms` variable → `ReferenceError: Cannot access 'terms' before initialization` whenever ≥1 customer existed → poisoned all settings pages.
+- Cheque **type filter** added (All / 🏦 Bank In / 🔴 Return / 🔀 Mixed) in Reconcile Cheques.
+- Batch type detection now recognizes **mixed** batches (previously any batch with a mix of bank-in + rejected was labeled Bank-In, hiding rejects).
+
+---
+
 ## v0.3.0-alpha — 2026-07-31 (Perf Fix + Per-Cheque Verify)
 
 **Issues reported:**

@@ -5,6 +5,21 @@
 
 ---
 
+## v0.3.2-alpha — 2026-08-02 (Storage Quota Crash + Receipt Viewer)
+
+**Issues reported:**
+1. Reconcile flow: upload receipt → freeze; partial submissions vanish; verify unresponsive.
+2. No popup viewer for uploaded documents.
+
+**Fixed:**
+- **Root cause:** `localStorage.setItem` threw uncaught `QuotaExceededError` once receipts (multi-MB base64) exceeded the ~5MB origin quota → uploads/verifies appeared frozen, saves silently failed.
+- Receipts are now **compressed on upload** (max 1600px JPEG @ 0.7 + 200px thumbnail) — a 5MB photo becomes ~100–300KB, ~20–50× more receipts fit.
+- `saveDB()` wrapped in try/catch with a clear "Storage full" toast.
+- **Receipt viewer popup** — click any receipt: image or PDF shown full-size in a modal (was `window.open`).
+- **Checkbox default fix** — reopening a partially-submitted batch no longer pre-checks already-submitted cheques.
+
+---
+
 ## v0.3.1-alpha — 2026-08-01 (Settings TDZ Fix + Type Filter)
 
 **Issues reported:**

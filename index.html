@@ -379,48 +379,87 @@ const ROLE_LABELS = {site_admin:'Site Admin',process_admin:'Process Admin',user:
 let CURRENT_USER = null;           // logged-in user object
 let DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, nextUserId:1};
 
-// ─── Persistence ──────────────────────────────────────────
-function loadDB(){
-  try{
-    const raw = localStorage.getItem('chequeReconDB');
-    if(raw){
-      DB = JSON.parse(raw);
-      // Migrate old admin to site_admin
-      DB.users.forEach(u=>{
-        if(u.roles.includes('process_admin') && !u.roles.includes('site_admin') && u.username==='admin'){
-          u.roles = ['site_admin', 'process_admin', 'verifier'];
-        }
-        // Ensure process_admin can also verify
-        if(u.roles.includes('process_admin') && !u.roles.includes('verifier')){
-          u.roles.push('verifier');
-        }
-      });
-      // Ensure location field exists on users
-      DB.users.forEach(u => { if(u.location===undefined) u.location = ''; });
-      // Ensure branches array exists
-      if(!DB.branches) DB.branches = [];
-      // Ensure customers exist
-      if(!DB.customers) DB.customers = [];
-      if(!DB.customerMap) DB.customerMap = {};
-      // Ensure incidents exist
-      if(!DB.incidents) DB.incidents = [];
-      if(!DB.nextIncidentId) DB.nextIncidentId = 1;
-      saveDB();
-      return true;
-    }
-  }catch(e){}
-  DB = {users:[], cheques:[], batchReceipts:{}, branchMap:{}, branches:[], customers:[], customerMap:{}, incidents:[], nextUserId:1, nextIncidentId:1};
-  DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
-  DB.nextUserId=2;
-  saveDB();
-  return false;
+// ─── Persistence (IndexedDB primary, localStorage fallback) ──
+let _idb = null;
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    if(_idb)return res(_idb);
+    if(!window.indexedDB)return rej(new Error('no idb'));
+    const req=indexedDB.open('chequeSenseDB',1);
+    req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};
+    req.onsuccess=()=>{_idb=req.result;res(_idb);};
+    req.onerror=()=>rej(req.error);
+  });
 }
+function idbGet(key){
+  return new Promise((res,rej)=>{
+    idbOpen().then(db=>{
+      const tx=db.transaction('kv','readonly').objectStore('kv').get(key);
+      tx.onsuccess=()=>res(tx.result);
+      tx.onerror=()=>rej(tx.error);
+    }).catch(rej);
+  });
+}
+function idbPut(key,val){
+  return new Promise((res,rej)=>{
+    idbOpen().then(db=>{
+      const tx=db.transaction('kv','readwrite').objectStore('kv').put(val,key);
+      tx.onsuccess=()=>res();
+      tx.onerror=()=>rej(tx.error);
+    }).catch(rej);
+  });
+}
+
+// loadDB is async — returns Promise. Reads IndexedDB, migrates legacy localStorage if present.
+function loadDB(){
+  return idbGet('chequeReconDB').then(raw=>{
+    if(raw)DB=typeof raw==='string'?JSON.parse(raw):raw;
+    else{
+      // Legacy: migrate from localStorage
+      try{
+        const ls=localStorage.getItem('chequeReconDB');
+        if(ls){DB=JSON.parse(ls);}
+      }catch(e){}
+    }
+    if(!DB||typeof DB!=='object'||!Array.isArray(DB.users))DB={users:[],cheques:[],batchReceipts:{},branchMap:{},nextUserId:1};
+    // Migrate old admin to site_admin
+    DB.users.forEach(u=>{
+      if(u.roles.includes('process_admin') && !u.roles.includes('site_admin') && u.username==='admin'){
+        u.roles = ['site_admin', 'process_admin', 'verifier'];
+      }
+      if(u.roles.includes('process_admin') && !u.roles.includes('verifier')){
+        u.roles.push('verifier');
+      }
+    });
+    DB.users.forEach(u=>{if(u.location===undefined)u.location='';});
+    if(!DB.branches)DB.branches=[];
+    if(!DB.customers)DB.customers=[];
+    if(!DB.customerMap)DB.customerMap={};
+    if(!DB.incidents)DB.incidents=[];
+    if(!DB.nextIncidentId)DB.nextIncidentId=1;
+    saveDB(); // persist migrated state
+    return true;
+  }).catch(()=>{
+    DB={users:[],cheques:[],batchReceipts:{},branchMap:{},branches:[],customers:[],customerMap:{},incidents:[],nextUserId:1,nextIncidentId:1};
+    DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
+    DB.nextUserId=2;
+    saveDB();
+    return false;
+  });
+}
+
+// saveDB snapshots synchronously (guarantees write order) then persists async to IndexedDB.
+let _saveChain=Promise.resolve();
 function saveDB(){
-  try{localStorage.setItem('chequeReconDB',JSON.stringify(DB));}
-  catch(e){
-    console.error('saveDB failed',e);
-    toast('⚠️ Storage full — remove old receipts or export data','error');
-  }
+  let snap;
+  try{snap=JSON.stringify(DB);}catch(e){console.error('serialize failed',e);return;}
+  // try IndexedDB; fall back to localStorage for very small DBs
+  _saveChain=_saveChain.then(()=>idbPut('chequeReconDB',snap)).catch(()=>{
+    try{localStorage.setItem('chequeReconDB',snap);}catch(e){
+      console.error('saveDB failed',e);
+      toast('⚠️ Storage full — remove old receipts or export data','error');
+    }
+  });
 }
 
 function getUser(username){return DB.users.find(u=>u.username.toLowerCase()===username.toLowerCase())}
@@ -1418,7 +1457,7 @@ function doChangePassword(){
   saveDB();closeBatchModal();toast('Password updated','success');
 }
 
-const MODULE_VER = '0.3.0-alpha';
+const MODULE_VER = '0.4.0-alpha';
 let settingsTab=0;
 
 function renderSettings(){
@@ -1739,15 +1778,16 @@ function clearImport(){document.getElementById('importContent').style.display='n
 /* ════════════════════════════════════════════════════════════
    MODULE 12 — INIT
    ════════════════════════════════════════════════════════════ */
-loadDB();
-// Auto-login from session
-try{
-  const saved = JSON.parse(sessionStorage.getItem('chequeUser'));
-  if(saved && saved.username){
-    const user = getUser(saved.username);
-    if(user){CURRENT_USER=user;enterApp();}
-  }
-}catch(e){}
+loadDB().then(()=>{
+  // Auto-login from session
+  try{
+    const saved = JSON.parse(sessionStorage.getItem('chequeUser'));
+    if(saved && saved.username){
+      const user = getUser(saved.username);
+      if(user){CURRENT_USER=user;enterApp();}
+    }
+  }catch(e){}
+});
 </script>
 </body>
 </html>

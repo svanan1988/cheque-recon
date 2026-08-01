@@ -5,6 +5,18 @@
 
 ---
 
+## v0.4.0-alpha — 2026-08-02 (IndexedDB Storage Migration)
+
+**Issue:** localStorage ~5MB quota caps data volume — thousands of cheques + receipts (esp. PDFs) eventually crash saves.
+
+**Fixed:**
+- Storage layer migrated from localStorage → **IndexedDB** (disk-backed, ~100×+ capacity, 12MB+ tested).
+- `saveDB()` snapshots synchronously (write-order safe) → async IndexedDB write; falls back to localStorage for small DBs.
+- **Automatic migration** — existing localStorage data is copied to IndexedDB on first load; app code untouched (single storage module).
+- Verified: 2,000 cheques persist across reload; Dashboard renders 2,000 batches in 20ms; 12MB single write OK.
+
+---
+
 ## v0.3.2-alpha — 2026-08-02 (Storage Quota Crash + Receipt Viewer)
 
 **Issues reported:**

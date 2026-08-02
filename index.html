@@ -385,10 +385,11 @@ function idbOpen(){
   return new Promise((res,rej)=>{
     if(_idb)return res(_idb);
     if(!window.indexedDB)return rej(new Error('no idb'));
+    console.log('idbOpen: opening indexeddb');
     const req=indexedDB.open('chequeSenseDB',1);
-    req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');};
-    req.onsuccess=()=>{_idb=req.result;res(_idb);};
-    req.onerror=()=>rej(req.error);
+    req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');console.log('idbOpen: upgradeneeded');};
+    req.onsuccess=()=>{_idb=req.result;console.log('idbOpen: success');res(_idb);};
+    req.onerror=()=>{console.log('idbOpen: error',req.error);rej(req.error);};
   });
 }
 function idbGet(key){
@@ -437,6 +438,11 @@ function loadDB(){
     if(!DB.customerMap)DB.customerMap={};
     if(!DB.incidents)DB.incidents=[];
     if(!DB.nextIncidentId)DB.nextIncidentId=1;
+    // Ensure admin user exists if none
+    if(!DB.users.length){
+      DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
+      DB.nextUserId=2;
+    }
     saveDB(); // persist migrated state
     return true;
   }).catch(()=>{

@@ -5,6 +5,16 @@
 
 ---
 
+## v0.4.1-alpha — 2026-08-02 (Hotfix: Login Broken)
+
+**Issue:** After v0.4.0, login form rendered but signing in did nothing; console showed the app script never ran.
+
+**Root cause:** Orphaned duplicated lines (`DB.nextUserId=2; saveDB(); return false; }); }`) left outside the `loadDB` function by a bad patch during debugging → **syntax error killed the entire inline script**. Static HTML rendered, but no JavaScript executed.
+
+**Fixed:** Removed the orphaned block, restored clean `loadDB` structure. Verified: script loads, admin/admin123 logs in, IndexedDB persistence survives reload.
+
+---
+
 ## v0.4.0-alpha — 2026-08-02 (IndexedDB Storage Migration)
 
 **Issue:** localStorage ~5MB quota caps data volume — thousands of cheques + receipts (esp. PDFs) eventually crash saves.

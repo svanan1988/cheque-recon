@@ -443,6 +443,12 @@ function loadDB(){
     if(!DB.customerMap)DB.customerMap={};
     if(!DB.incidents)DB.incidents=[];
     if(!DB.nextIncidentId)DB.nextIncidentId=1;
+    // Incident ticket migration: assign stable ticket numbers + priority (2026-08-02)
+    DB.incidents.forEach(i=>{
+      if(!i.ticketNo)i.ticketNo='INC-'+String(i.id).padStart(4,'0');
+      if(!i.priority){const amt=i.totalAmount||0;i.priority=amt>=10000?'high':(amt>=1000?'medium':'low');}
+      if(!i.timeline)i.timeline=[];
+    });
     // Ensure admin user exists if none
     if(!DB.users.length){
       DB.users.push({id:1,username:'admin',password:'admin123',name:'System Admin',email:'',roles:['site_admin','process_admin','verifier'],createdAt:new Date().toISOString()});
@@ -970,12 +976,16 @@ function submitBatch(key){
     const batch=key.split('|');
     if(!DB.incidents)DB.incidents=[];
     if(!DB.nextIncidentId)DB.nextIncidentId=1;
+    const incAmt=checked.reduce((s,id)=>{const c=DB.cheques.find(x=>x.id===id);return s+(c?.amount||0);},0);
+    const incId=DB.nextIncidentId++;
     DB.incidents.push({
-      id:DB.nextIncidentId++,terminal:batch[0]||incidentTerminals[0],batch:batch[1]||'',
+      id:incId,ticketNo:'INC-'+String(incId).padStart(4,'0'),
+      priority:incAmt>=10000?'high':(incAmt>=1000?'medium':'low'),
+      terminal:batch[0]||incidentTerminals[0],batch:batch[1]||'',
       count:checked.length,chequeNos:checked.map(id=>DB.cheques.find(c=>c.id===id)?.chequeNo||id).join(', '),
-      totalAmount:checked.reduce((s,id)=>{const c=DB.cheques.find(x=>x.id===id);return s+(c?.amount||0);},0),
+      totalAmount:incAmt,
       reportedBy:CURRENT_USER.name||CURRENT_USER.username,
-      reportedAt:now,status:'open',resolvedBy:'',resolvedAt:'',notes:notes||'Cheque(s) reported missing'
+      reportedAt:now,status:'open',resolvedBy:'',resolvedAt:'',notes:notes||'Cheque(s) reported missing',timeline:[]
     });
   }
   saveDB();closeBatchModal();
@@ -1120,59 +1130,198 @@ function renderVerify(){
     </div>`;}).join('');}
 
 /* ════════════════════════════════════════════════════════════
-   MODULE 7b — INCIDENTS
+   MODULE 7b — INCIDENT / TICKET MANAGEMENT (ServiceNow-style)
    ════════════════════════════════════════════════════════════ */
+let currentIncidentFilter='all';
+let currentIncidentView=null;
+
+function incidentTicketNo(i){
+  return i.ticketNo || ('INC-'+String(i.id).padStart(4,'0'));
+}
+function incidentPriority(i){
+  if(i.priority)return i.priority;
+  const amt=i.totalAmount||0;
+  return amt>=10000?'high':(amt>=1000?'medium':'low');
+}
+function incidentPriorityMeta(p){
+  const map={
+    high:{label:'High',color:'var(--red)',bg:'var(--red-bg)'},
+    medium:{label:'Medium',color:'var(--amber)',bg:'var(--amber-bg)'},
+    low:{label:'Low',color:'var(--green)',bg:'var(--green-bg)'}
+  };
+  return map[p]||map.low;
+}
+function incidentStatusMeta(s){
+  const map={
+    open:{label:'🚨 Open',color:'var(--red)',bg:'var(--red-bg)'},
+    in_progress:{label:'🔍 In Progress',color:'var(--blue)',bg:'var(--blue-bg)'},
+    resolved:{label:'✅ Resolved',color:'var(--green)',bg:'var(--green-bg)'}
+  };
+  return map[s]||map.open;
+}
+function incidentAge(i){
+  const at=i.reportedAt||i.createdAt||new Date().toISOString();
+  const days=Math.max(0,Math.floor((Date.now()-new Date(at))/86400000));
+  if(days===0)return 'Today';
+  if(days===1)return 'Yesterday';
+  return days+'d ago';
+}
+
+function setIncidentFilter(f){
+  currentIncidentFilter=f;
+  const sel=document.getElementById('incidentStatusFilter');
+  if(sel)sel.value=f;
+  currentIncidentView=null;
+  renderIncidents();
+}
+function openIncidentView(id){currentIncidentView=id;renderIncidents();}
+function backToIncidentList(){currentIncidentView=null;renderIncidents();}
+
 function renderIncidents(){
-  const active=DB.incidents?.filter(i=>i.status==='open'||i.status==='in_progress')||[];
-  const resolved=DB.incidents?.filter(i=>i.status==='resolved')||[];
   const g=document.getElementById('incidentsGrid');
   if(!g)return;
-  if(active.length===0 && resolved.length===0){g.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>No incidents</h3></div>`;return;}
-  let h='';
-  if(active.length>0){
-    h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--red)">🚨 Active Incidents (${active.length})</div><div class="batch-grid" style="margin-bottom:20px">`;
-    active.forEach(i=>{h+=incidentCard(i);});
-    h+=`</div>`;
+  const all=DB.incidents||[];
+  let list=all;
+  if(currentIncidentFilter!=='all')list=list.filter(i=>i.status===currentIncidentFilter);
+
+  const open=all.filter(i=>i.status==='open').length;
+  const inProg=all.filter(i=>i.status==='in_progress').length;
+  const resolved=all.filter(i=>i.status==='resolved').length;
+
+  let h=`
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
+    <div class="stat-card" style="cursor:pointer;border:${currentIncidentFilter==='open'?'1px solid var(--red)':'1px solid var(--border)'}" onclick="setIncidentFilter('open')">
+      <div class="label">🚨 Open</div><div class="value" style="color:var(--red)">${open}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;border:${currentIncidentFilter==='in_progress'?'1px solid var(--blue)':'1px solid var(--border)'}" onclick="setIncidentFilter('in_progress')">
+      <div class="label">🔍 In Progress</div><div class="value" style="color:var(--blue)">${inProg}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;border:${currentIncidentFilter==='resolved'?'1px solid var(--green)':'1px solid var(--border)'}" onclick="setIncidentFilter('resolved')">
+      <div class="label">✅ Resolved</div><div class="value" style="color:var(--green)">${resolved}</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;border:${currentIncidentFilter==='all'?'1px solid var(--accent)':'1px solid var(--border)'}" onclick="setIncidentFilter('all')">
+      <div class="label">🎫 All Tickets</div><div class="value">${all.length}</div>
+    </div>
+  </div>`;
+
+  if(currentIncidentView!==null){
+    const i=all.find(x=>x.id===currentIncidentView);
+    if(i){h+=incidentDetailHTML(i);g.innerHTML=h;return;}
+    currentIncidentView=null;
   }
-  if(resolved.length>0){
-    h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-muted)">✅ Resolved (${resolved.length})</div><div class="batch-grid">`;
-    resolved.slice(0,30).forEach(i=>{h+=incidentCard(i,true);});
-    h+=`</div>`;
+
+  const search=(document.getElementById('incidentSearch')?.value||'').toLowerCase();
+  if(search)list=list.filter(i=>[incidentTicketNo(i),i.terminal,i.batch,i.chequeNos,i.notes,i.assignedTo,i.reportedBy].some(x=>(x||'').toLowerCase().includes(search)));
+
+  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <input type="text" class="search" placeholder="🔎 Search ticket, location, batch, cheque, assignee..." id="incidentSearch" oninput="renderIncidents()" style="flex:1;min-width:220px">
+    <select id="incidentStatusFilter" onchange="setIncidentFilter(this.value)" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;outline:none">
+      <option value="all">All Status</option>
+      <option value="open">🚨 Open</option>
+      <option value="in_progress">🔍 In Progress</option>
+      <option value="resolved">✅ Resolved</option>
+    </select>
+  </div>`;
+
+  if(list.length===0){
+    h+=`<div class="empty-state"><div class="icon">🎫</div><h3>No tickets found</h3></div>`;
+  }else{
+    h+=`<div class="table-wrap" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2);text-align:left;color:var(--text-muted)">
+          <th style="padding:8px 10px">Ticket</th>
+          <th style="padding:8px 10px">Summary</th>
+          <th style="padding:8px 10px">Priority</th>
+          <th style="padding:8px 10px">Assignee</th>
+          <th style="padding:8px 10px">Reporter</th>
+          <th style="padding:8px 10px">Status</th>
+          <th style="padding:8px 10px">Age</th>
+        </tr></thead>
+        <tbody>${list.map(i=>incidentRowHTML(i)).join('')}</tbody>
+      </table>
+    </div>`;
   }
   g.innerHTML=h;
 }
 
-function incidentCard(i,isResolved){
+function incidentRowHTML(i){
+  const p=incidentPriorityMeta(incidentPriority(i));
+  const s=incidentStatusMeta(i.status);
+  const assignee=i.assignedTo?esc(i.assignedTo):'<span style="color:var(--text-muted);opacity:.6">— Unassigned —</span>';
+  const summary=`${esc(i.terminal)} · Batch ${esc(i.batch)} · ${i.count} chq · ${fc(i.totalAmount)}`;
+  return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="openIncidentView(${i.id})">
+    <td style="padding:9px 10px;color:var(--accent);font-weight:600;white-space:nowrap">${incidentTicketNo(i)}</td>
+    <td style="padding:9px 10px">${summary}<div style="font-size:11px;color:var(--text-muted);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.notes)}</div></td>
+    <td style="padding:9px 10px"><span style="font-size:10px;padding:2px 8px;border-radius:12px;background:${p.bg};color:${p.color};font-weight:600">${p.label}</span></td>
+    <td style="padding:9px 10px">${assignee}</td>
+    <td style="padding:9px 10px">${esc(i.reportedBy||'—')}</td>
+    <td style="padding:9px 10px"><span style="font-size:10px;padding:2px 8px;border-radius:12px;background:${s.bg};color:${s.color};font-weight:600">${s.label}</span></td>
+    <td style="padding:9px 10px;color:var(--text-muted);white-space:nowrap">${incidentAge(i)}</td>
+  </tr>`;
+}
+
+function incidentDetailHTML(i){
+  const p=incidentPriorityMeta(incidentPriority(i));
+  const s=incidentStatusMeta(i.status);
   const canManage=hasRole(ROLE.SITE_ADMIN)||hasRole(ROLE.PROCESS_ADMIN)||hasRole(ROLE.VERIFIER);
-  const badge=i.status==='resolved'
-    ?'<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--green-bg);color:var(--green)">✅ Resolved</span>'
-    :(i.status==='in_progress'
-      ?'<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--blue-bg);color:var(--blue)">🔍 In Progress</span>'
-      :'<span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--red-bg);color:var(--red)">🚨 Open</span>');
+  const isResolved=i.status==='resolved';
+
   let actions='';
   if(!isResolved&&canManage){
-    if(i.status==='open')actions+=`<button class="btn btn-primary btn-xs" onclick="acceptIncident(${i.id})">✅ Accept</button> `;
-    if(i.status==='in_progress'&&!i.assignedTo)actions+=`<button class="btn btn-secondary btn-xs" onclick="assignIncidentPrompt(${i.id})">👤 Assign</button> `;
-    if(i.status==='in_progress')actions+=`<button class="btn btn-secondary btn-xs" onclick="investigateIncidentPrompt(${i.id})">🔍 Investigate</button> `;
-    if(i.status==='in_progress')actions+=`<button class="btn btn-success btn-xs" onclick="resolveIncidentPrompt(${i.id})">✅ Resolve</button>`;
+    if(i.status==='open')actions+=`<button class="btn btn-primary btn-sm" onclick="acceptIncident(${i.id})">✅ Accept</button> `;
+    if(i.status==='in_progress')actions+=`<button class="btn btn-secondary btn-sm" onclick="assignIncidentPrompt(${i.id})">👤 Assign</button> `;
+    if(i.status==='in_progress')actions+=`<button class="btn btn-secondary btn-sm" onclick="investigateIncidentPrompt(${i.id})">🔍 Investigate</button> `;
+    if(i.status==='in_progress')actions+=`<button class="btn btn-success btn-sm" onclick="resolveIncidentPrompt(${i.id})">✅ Resolve</button>`;
   }
+
   const tl=(i.timeline||[]).map(t=>`
-    <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">
+    <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px;padding:6px 0;border-bottom:1px solid var(--border)">
       <span style="white-space:nowrap;color:var(--text-muted)">${fd(t.at)}</span>
       <span style="color:var(--accent);font-weight:600;white-space:nowrap">${esc(t.action)}</span>
-      <span style="flex:1;color:var(--text-muted)">${esc(t.note||'')} <span style="color:var(--text-muted);opacity:.7">— ${esc(t.by)}</span></span>
-    </div>`).join('');
-  return `<div style="background:var(--surface);border:1px solid ${isResolved?'var(--border)':'var(--red)'};border-radius:var(--radius);padding:14px;${isResolved?'opacity:.65':''}">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><strong>${esc(i.terminal)} · Batch ${esc(i.batch)}</strong>${badge}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">${i.count} cheque(s) · ${fc(i.totalAmount)} · Cheques: ${esc(i.chequeNos)}</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${esc(i.notes)}</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
-      ${i.acceptedBy?`✅ Accepted: ${esc(i.acceptedBy)} (${fd(i.acceptedAt)})<br>`:''}
-      ${i.assignedTo?`👤 Assigned: ${esc(i.assignedTo)} (${fd(i.assignedAt)})<br>`:''}
-      ${i.resolvedBy?`🏁 Outcome: ${esc(i.outcome||'')} — by ${esc(i.resolvedBy)} (${fd(i.resolvedAt)})`:''}
+      <span style="flex:1;color:var(--text-muted)">${esc(t.note||'')} <span style="opacity:.7">— ${esc(t.by)}</span></span>
+    </div>`).join('')||'<div style="color:var(--text-muted);font-size:12px;padding:6px 0">No activity recorded</div>';
+
+  const infoRows=[
+    ['Ticket',incidentTicketNo(i)],
+    ['Status',s.label],
+    ['Priority',p.label],
+    ['Location',esc(i.terminal||'—')],
+    ['Batch',esc(i.batch||'—')],
+    ['Cheques',esc(i.chequeNos||'—')],
+    ['Amount',fc(i.totalAmount||0)],
+    ['Reporter',esc(i.reportedBy||'—')],
+    ['Assignee',i.assignedTo?esc(i.assignedTo):'—'],
+    ['Reported',fd(i.reportedAt||i.createdAt)],
+    ['Accepted',i.acceptedBy?esc(i.acceptedBy)+' · '+fd(i.acceptedAt):'—'],
+    ['Outcome',i.resolvedBy?esc(i.outcome||'—')+' · '+esc(i.resolvedBy)+' · '+fd(i.resolvedAt):'—']
+  ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+    <span style="color:var(--text-muted)">${k}</span><span style="text-align:right;max-width:55%;overflow:hidden;text-overflow:ellipsis">${v}</span>
+  </div>`).join('');
+
+  return `
+  <div style="margin-bottom:12px">
+    <button class="btn btn-secondary btn-xs" onclick="backToIncidentList()">← Back to Tickets</button>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+    <div style="background:var(--surface2);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:16px;font-weight:700;color:var(--accent)">${incidentTicketNo(i)}</span>
+        <span style="font-size:10px;padding:3px 10px;border-radius:12px;background:${s.bg};color:${s.color};font-weight:600">${s.label}</span>
+        <span style="font-size:10px;padding:3px 10px;border-radius:12px;background:${p.bg};color:${p.color};font-weight:600">Priority: ${p.label}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">${esc(i.terminal)} · Batch ${esc(i.batch)} · ${i.count} cheque(s)</div>
     </div>
-    ${tl?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;max-height:160px;overflow-y:auto">${tl}</div>`:''}
-    ${actions?`<div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div>`:''}
+    <div style="padding:16px">
+      <div style="font-size:13px;margin-bottom:14px;color:var(--text)">${esc(i.notes)}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">${infoRows}</div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text-muted)">🕒 Activity Timeline</div>
+          ${tl}
+        </div>
+      </div>
+      ${actions?`<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">${actions}</div>`:''}
+    </div>
   </div>`;
 }
 
@@ -1232,19 +1381,50 @@ function confirmAssignIncident(id){
 
 function investigateIncidentPrompt(id){
   const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
-  const note=prompt('Investigation notes / findings:');
-  if(note===null)return;
+  document.getElementById('modalTitle').textContent='🔍 Investigate Incident '+incidentTicketNo(i);
+  document.getElementById('modalBody').innerHTML=`
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${esc(i.terminal)} · Batch ${esc(i.batch)} · ${fc(i.totalAmount)}</div>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Investigation notes / findings:</label>
+    <textarea id="investigateNote" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:80px;outline:none" placeholder="Record what was found..."></textarea>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="confirmInvestigateIncident(${id})">Save Findings</button>`;
+  document.getElementById('batchModal').classList.add('open');
+}
+
+function confirmInvestigateIncident(id){
+  const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
+  const note=document.getElementById('investigateNote')?.value?.trim();
   incidentLog(i,'Investigation',note||'No notes added');
-  saveDB();renderIncidents();toast('Investigation updated','success');
+  saveDB();closeBatchModal();renderIncidents();toast('Investigation updated','success');
 }
 
 function resolveIncidentPrompt(id){
   const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
-  const outcome=prompt('Outcome of investigation:');
-  if(outcome===null)return;
-  i.status='resolved';i.resolvedBy=CURRENT_USER.name||CURRENT_USER.username;i.resolvedAt=new Date().toISOString();i.outcome=outcome;
-  incidentLog(i,'Resolved',outcome||'Resolved');
-  saveDB();renderIncidents();renderDashboard();toast('Incident resolved','success');
+  const outcomes=['Cheque recovered / banked','Cheque reissued','Written off','Customer recharged','Found in branch','Other'];
+  document.getElementById('modalTitle').textContent='✅ Resolve Incident '+incidentTicketNo(i);
+  document.getElementById('modalBody').innerHTML=`
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${esc(i.terminal)} · Batch ${esc(i.batch)} · ${fc(i.totalAmount)}</div>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Outcome / resolution code:</label>
+    <select id="resolveOutcome" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;outline:none">
+      ${outcomes.map(o=>`<option value="${o}">${o}</option>`).join('')}
+    </select>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin:12px 0 6px">Resolution details (optional):</label>
+    <textarea id="resolveNote" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;resize:vertical;min-height:60px;outline:none" placeholder="How was it resolved?"></textarea>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+    <button class="btn btn-success" onclick="confirmResolveIncident(${id})">✅ Resolve Ticket</button>`;
+  document.getElementById('batchModal').classList.add('open');
+}
+
+function confirmResolveIncident(id){
+  const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
+  const outcome=document.getElementById('resolveOutcome')?.value||'Resolved';
+  const note=document.getElementById('resolveNote')?.value?.trim();
+  i.status='resolved';i.resolvedBy=CURRENT_USER.name||CURRENT_USER.username;i.resolvedAt=new Date().toISOString();
+  i.outcome=note?outcome+' — '+note:outcome;
+  incidentLog(i,'Resolved',i.outcome);
+  saveDB();closeBatchModal();renderIncidents();renderDashboard();toast('Incident resolved','success');
 }
 
 /* ════════════════════════════════════════════════════════════

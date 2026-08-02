@@ -5,6 +5,24 @@
 
 ---
 
+## v0.4.4-alpha — 2026-08-02 (Incident Management → ServiceNow-style Ticket System)
+
+**Request:** Incident page should look/behave like a proper ticket management system (ServiceNow-inspired): structured, organized, actionable.
+
+**Implemented:**
+- **Ticket list view:** ServiceNow-style table (Ticket #, Summary, Priority, Assignee, Reporter, Status, Age) replacing the flat card list. Rows clickable → detail view.
+- **Stat cards row:** Open / In Progress / Resolved / All Tickets — clickable filters that highlight the active filter.
+- **Search + status filter:** free-text search across ticket no, location, batch, cheque, assignee, reporter + status dropdown.
+- **Ticket numbering:** stable `INC-0001` format assigned via migration (backfill for existing incidents) and on creation.
+- **Priority:** auto-derived from total amount (High ≥ RM10k, Medium ≥ RM1k, Low) with colored badges.
+- **Detail view:** header with ticket no + status/priority badges, structured info panel (ticket, status, priority, location, batch, cheques, amount, reporter, assignee, reported, accepted, outcome), activity timeline panel, contextual action buttons (Accept → Assign → Investigate → Resolve), Back to Tickets button.
+- **Structured modals:** Investigate now uses a textarea modal; Resolve uses a resolution-code dropdown (Cheque recovered / banked, Cheque reissued, Written off, Customer recharged, Found in branch, Other) + notes field. No more `prompt()`.
+- **Migration:** existing incidents get `ticketNo` + `priority` + `timeline[]` on load.
+
+**Verified in browser:** list renders (4 stat cards, 3 rows, search bar); detail view renders; Accept → Assign (dropdown) → Investigate (modal) → Resolve (code dropdown) lifecycle works; status filters work; resolved tickets leave the Open filter.
+
+---
+
 ## v0.4.3-alpha — 2026-08-02 (Theme Toggle + Partial Verification + Role Visibility)
 
 **Issues reported:**

@@ -5,7 +5,21 @@
 
 ---
 
-## v0.4.1-alpha — 2026-08-02 (Hotfix: Login Broken)
+## v0.4.3-alpha — 2026-08-02 (Theme Toggle + Partial Verification + Role Visibility)
+
+**Issues reported:**
+1. Dark/light toggle button visible but didn't switch theme.
+2. Partial verification: after 1 cheque submitted, remaining cheques couldn't be updated (upload button missing); verify loop — "batch verified" but card remained.
+3. Customer Profiling / Job Profiling not visible to Verifier role.
+
+**Fixed:**
+- **Theme toggle:** inverted `toggleTheme()` logic (was computing `next` from wrong state → always stayed dark). Verified: dark→light→dark works, persists via localStorage.
+- **Partial verification:** `batchStatus()` now returns `pending` once no cheques are `awaiting_verification` (prevents verify loop); modal shows upload area whenever pending cheques remain; footer shows BOTH "Submit Remaining" AND "Verify Selected" for mixed batches; only actionable cheques pre-checked. Verified end-to-end: submit 1/3 → appears in Verify → verify → batch returns to pending → remaining cheques re-submittable.
+- **Role visibility:** Customer Profiling + Job Profiling now visible to Verifier role (Settings items).
+
+---
+
+## v0.4.2-alpha — 2026-08-02 (Bug Batch: User List, Page State, Timeline, Incident Assign)
 
 **Issue:** After v0.4.0, login form rendered but signing in did nothing; console showed the app script never ran.
 

@@ -11,6 +11,8 @@
    ROOT & RESET
    ════════════════════════════════════════════════ */
 :root{--bg:#000000;--surface:#111111;--surface2:#1a1a1a;--border:#2a2a2a;--text:#ffffff;--text-muted:#9CA3AF;--accent:#DC2626;--accent-hover:#EF4444;--green:#22c55e;--green-bg:#0f291e;--amber:#f59e0b;--amber-bg:#221d12;--blue:#3b82f6;--blue-bg:#1a1a3a;--red:#DC2626;--red-bg:#2a0a0a;--gray:#6b7280;--gray-bg:#1f1f1f;--radius:10px;--shadow:0 2px 16px rgba(0,0,0,.6);--sidebar-w:220px}
+/* Light theme */
+:root.light{--bg:#f5f5f5;--surface:#ffffff;--surface2:#f0f0f0;--border:#e0e0e0;--text:#1a1a1a;--text-muted:#666666;--accent:#DC2626;--accent-hover:#EF4444;--green:#22c55e;--green-bg:#d4edda;--amber:#f59e0b;--amber-bg:#fff3cd;--blue:#3b82f6;--blue-bg:#cce5ff;--red:#DC2626;--red-bg:#f8d7da;--gray:#6b7280;--gray-bg:#e9ecef;--shadow:0 2px 16px rgba(0,0,0,.1)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 input,select,textarea,button{font:inherit;color:inherit}
@@ -40,9 +42,12 @@ input,select,textarea,button{font:inherit;color:inherit}
 
 .sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
 
-.sidebar-brand{padding:16px 14px;border-bottom:1px solid var(--border);white-space:nowrap;display:flex;align-items:center;gap:8px;min-height:52px}
+.sidebar-brand{padding:16px 14px;border-bottom:1px solid var(--border);white-space:nowrap;display:flex;align-items:center;gap:8px;min-height:52px;position:relative}
 .sidebar-brand .brand-icon{font-size:18px;width:36px;text-align:center;flex-shrink:0}
 .sidebar-brand .brand-text{font-size:14px;font-weight:700}
+/* Theme toggle */
+.theme-toggle{position:absolute;top:16px;right:14px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 8px;cursor:pointer;font-size:14px;transition:.2s}
+.theme-toggle:hover{background:var(--border)}
 
 .sidebar-nav{flex:1;padding:6px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:.15s;border:none;background:none;width:100%;text-align:left}
@@ -482,13 +487,15 @@ function getBranch(terminal){return DB.branchMap[terminal]||'Unassigned'}
 
 // ─── Compute batch status from individual cheques ─────────
 function batchStatus(cheques){
+  // All closed/verified → batch closed (leaves Verify)
   if(cheques.every(c=>c.status==='closed'||c.status==='verified')) return 'closed';
-  if(cheques.every(c=>c.status==='awaiting_verification'||c.status==='verified'||c.status==='closed')) return 'awaiting_verification';
+  // Any cheque still awaiting_verification → stays in Verify
+  if(cheques.some(c=>c.status==='awaiting_verification')) return 'awaiting_verification';
+  // Any in_progress → in_progress
   if(cheques.some(c=>c.status==='in_progress')) return 'in_progress';
+  // Otherwise pending (all pending, or mixed verified+pending)
   return 'pending';
 }
-
-// ─── Get all batches (grouped by terminal + batch) ────────
 function getAllBatches(){
   const groups = {};
   DB.cheques.forEach(c=>{
@@ -527,7 +534,32 @@ function enterApp(){
   document.getElementById('appLayout').classList.add('open');
   const vl=document.getElementById('versionLabel');if(vl)vl.textContent='ChequeSense v'+MODULE_VER;
   buildSidebar();
-  switchPage('dashboard');
+  // Restore last page from sessionStorage
+  const lastPage=sessionStorage.getItem('lastPage')||'dashboard';
+  switchPage(lastPage);
+  // Restore theme preference
+  const theme=localStorage.getItem('theme')||'dark';
+  applyTheme(theme);
+}
+
+function toggleTheme(){
+  const isLight=document.documentElement.classList.contains('light');
+  const next=isLight?'dark':'light';
+  localStorage.setItem('theme',next);
+  applyTheme(next);
+  toast('Theme: '+next,'info');
+}
+
+function applyTheme(theme){
+  if(theme==='light'){
+    document.documentElement.classList.add('light');
+    const toggle=document.getElementById('themeToggle');
+    if(toggle)toggle.textContent='☀️';
+  }else{
+    document.documentElement.classList.remove('light');
+    const toggle=document.getElementById('themeToggle');
+    if(toggle)toggle.textContent='🌙';
+  }
 }
 
 function doLogout(){
@@ -551,8 +583,8 @@ const NAV_ITEMS = [
   {id:'incidents',label:'Incidents',icon:'🚨',roles:['site_admin','process_admin','verifier']},
   {type:'sep',label:'— Settings —',roles:['site_admin']},
   {id:'settings-users',label:'▸ User Admin',icon:'👥',roles:['site_admin']},
-  {id:'settings-customers',label:'▸ Customer Profiling',icon:'🏭',roles:['site_admin']},
-  {id:'settings-jobs',label:'▸ Job Profiling',icon:'🏢',roles:['site_admin']},
+  {id:'settings-customers',label:'▸ Customer Profiling',icon:'🏭',roles:['site_admin','verifier']},
+  {id:'settings-jobs',label:'▸ Job Profiling',icon:'🏢',roles:['site_admin','verifier']},
 ];
 
 function buildSidebar(){
@@ -578,11 +610,24 @@ function buildSidebar(){
   const rolesText=CURRENT_USER.roles.map(r=>rl[r]||r).join(', ');
   const badge=document.getElementById('sideRoleBadge');badge.textContent=rolesText;
   const cls=CURRENT_USER.roles[0]||'user';badge.className='role-badge '+cls;
+
+  // Add theme toggle button to sidebar brand
+  const brand=document.querySelector('.sidebar-brand');
+  if(brand && !document.getElementById('themeToggle')){
+    const toggle=document.createElement('button');
+    toggle.id='themeToggle';
+    toggle.className='theme-toggle';
+    toggle.textContent=localStorage.getItem('theme')==='light'?'☀️':'🌙';
+    toggle.onclick=toggleTheme;
+    brand.appendChild(toggle);
+  }
 }
 
 function switchPage(id){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  // Save last page for persistence across refresh
+  sessionStorage.setItem('lastPage', id);
   // Handle settings sub-pages (they all use page-settings)
   if(id.startsWith('settings-')){
     const sp=document.getElementById('page-settings');
@@ -666,11 +711,9 @@ function renderDashboard(){
    MODULE 5 — BATCH MODAL (checkboxes + proof upload)
    ════════════════════════════════════════════════════════════ */
 let currentBatchKey = null;
-let _receiptUploaded = false;
 
 function openBatchModal(key){
   currentBatchKey = key;
-  _receiptUploaded = false;
   const all = getAllBatches();
   const batch = all.find(b=>b.key===key);
   if(!batch)return;
@@ -687,9 +730,13 @@ function openBatchModal(key){
   document.getElementById('modalTitle').textContent = `📋 ${batch.terminal} · Batch ${batch.batch} · ${batch.date}`;
 
   const isVerifyMode = canVerify && batch.status==='awaiting_verification';
-  const showChecks = (canSubmit&&(batch.status==='pending'||batch.status==='in_progress')) || isVerifyMode;
+  const hasPendingCheques = batch.cheques.some(c=>c.status==='pending'||c.status==='in_progress');
+  const showChecks = (canSubmit&&(batch.status==='pending'||batch.status==='in_progress'||hasPendingCheques)) || isVerifyMode;
   const chequeTable = batch.cheques.map((c,i)=>{
-    const defChecked = isVerifyMode?'checked':(c.status==='pending'||c.status==='in_progress'?'checked':'');
+    // Only check cheques that can actually be acted on
+    let defChecked='';
+    if(isVerifyMode && (c.status==='awaiting_verification')) defChecked='checked';
+    else if(!isVerifyMode && (c.status==='pending'||c.status==='in_progress')) defChecked='checked';
     return `
     <tr>
       ${showChecks?
@@ -720,10 +767,10 @@ function openBatchModal(key){
     </div>`;
 
   // Receipt section (in-place updatable — does NOT re-render the cheque table)
-  html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
-    <div id="receiptList_${receiptKey}"></div>`;
+  html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">\n    <div id="receiptList_${receiptKey}"></div>`;
   
-  if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
+  // Upload area shows whenever there are pending cheques that still need submission
+  if(canSubmit && (batch.status==='pending'||batch.status==='in_progress'||hasPendingCheques)){
     // Action selector with live toggle for Missing
     const selId='batchAction_'+receiptKey;
     html += `<div style="margin-bottom:8px">
@@ -762,8 +809,10 @@ function openBatchModal(key){
 
   // Footer buttons
   let footerHtml = `<button class="btn btn-secondary" onclick="closeBatchModal()">Close</button>`;
-  if(canSubmit && (batch.status==='pending'||batch.status==='in_progress')){
-    footerHtml += `<button class="btn btn-primary" onclick="submitBatch('${key}')">✅ Submit Selected</button>`;
+  const canSubmitNow = canSubmit && (batch.status==='pending'||batch.status==='in_progress'||hasPendingCheques);
+  if(canSubmitNow){
+    const lbl = (batch.status==='awaiting_verification' && hasPendingCheques) ? 'Submit Remaining' : 'Submit Selected';
+    footerHtml += `<button class="btn btn-primary" onclick="submitBatch('${key}')">✅ ${lbl}</button>`;
   }
   if(canVerify && batch.status==='awaiting_verification'){
     footerHtml += `<button class="btn btn-success" onclick="verifySelected('verified')">✅ Verify Selected</button>`;
@@ -892,8 +941,9 @@ function submitBatch(key){
   const receiptKey = key.split('|').join('_');
   const actionSel=document.getElementById('batchAction_'+receiptKey);
   const action=actionSel?.value||'bankin';
-  // Require NEW receipt upload for Bank In / Return
-  if((action==='bankin'||action==='return') && !_receiptUploaded){
+  // Require at least one receipt in batchReceipts for Bank In / Return
+  const hasAnyReceipt = (DB.batchReceipts[receiptKey]||[]).length > 0;
+  if((action==='bankin'||action==='return') && !hasAnyReceipt){
     toast('Upload a NEW receipt before submitting','error');
     return;
   }
@@ -1053,16 +1103,21 @@ function renderVerify(){
   });
   const grid=document.getElementById('verifyGrid');
   if(batches.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">✅</div><h3>Nothing to verify</h3></div>`;return;}
-  grid.innerHTML=batches.map(b=>`
+  grid.innerHTML=batches.map(b=>{
+    // Get action info from first submitted cheque
+    const firstSubmitted=b.cheques.find(c=>c.status==='awaiting_verification'||c.status==='verified');
+    const actionLabel=firstSubmitted?{bankin:'🏦 Bank-In',rejected:'🔴 Return'}[firstSubmitted.jobType]||(firstSubmitted.rejectReason||'Pending'):'';
+    return `
     <div class="batch-card" onclick="openBatchModal('${b.key}')">
       <div class="top"><div><div class="location">${esc(b.terminal)}</div><div class="batch-no">Batch: ${esc(b.batch)} · ${b.date}</div></div>
         <div class="total-amt">${fc(b.total)}</div></div>
-      <div class="meta"><span>📄 ${b.count} cheques</span><span>${b.type==='rejected'?'🔴 Return':(b.type==='mixed'?'🔀 Mixed':'🏦 Bank-In')}</span><span>📎 ${b.hasReceipt?'Receipt uploaded':'No receipt'}</span></div>
+      <div class="meta"><span>📄 ${b.count} cheques</span><span>${b.type==='rejected'?'🔴 Return':(b.type==='mixed'?'🔀 Mixed':' Bank-In')}</span><span>📎 ${b.hasReceipt?'Receipt uploaded':'No receipt'}</span></div>
+      ${actionLabel?`<div style="font-size:11px;color:var(--text-muted);margin:4px 0">Action: ${esc(actionLabel)}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-success btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','verified')">✅ Confirm</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();verifyBatch('${b.key}','in_progress')">❌ Reject</button>
       </div>
-    </div>`).join('');}
+    </div>`;}).join('');}
 
 /* ════════════════════════════════════════════════════════════
    MODULE 7b — INCIDENTS
@@ -1135,13 +1190,44 @@ function acceptIncident(id){
 
 function assignIncidentPrompt(id){
   const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
-  const users=DB.users.filter(u=>u.roles.includes(ROLE.VERIFIER)||u.roles.includes(ROLE.PROCESS_ADMIN)).map(u=>u.name||u.username);
+  const users=DB.users.filter(u=>u.roles.includes(ROLE.VERIFIER)||u.roles.includes(ROLE.PROCESS_ADMIN));
   if(users.length===0){toast('No verifier/process admin users to assign','error');return;}
-  const input=prompt('Assign incident to:',users[0]);
-  if(!input)return;
-  i.assignedTo=input;i.assignedAt=new Date().toISOString();
-  incidentLog(i,'Assigned','Assigned to '+input);
-  saveDB();renderIncidents();toast('Incident assigned','success');
+
+  // Build dropdown options
+  // SECURITY: Data from app's own localStorage (DB.users), not external input. esc() used for HTML escaping.
+  let opts='<option value="">-- Select Assignee --</option>';
+  users.forEach(u=>{opts+=`<option value="${u.username}">${esc(u.name||u.username)} (${esc(u.username)})</option>`;});
+
+  // Show modal with dropdown
+  document.getElementById('modalTitle').textContent='👤 Assign Incident';
+  document.getElementById('modalBody').innerHTML=`
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Assign to:</label>
+      <select id="assignUserSelect" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;outline:none">
+        ${opts}
+      </select>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:8px">
+      Available verifiers/process admins: ${users.map(u=>esc(u.name||u.username)+' ['+u.username+']').join(', ')}
+    </div>`;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="confirmAssignIncident(${id})">Assign</button>`;
+  document.getElementById('batchModal').classList.add('open');
+}
+
+function confirmAssignIncident(id){
+  const i=DB.incidents?.find(x=>x.id===id);if(!i)return;
+  const sel=document.getElementById('assignUserSelect');
+  const username=sel?.value;
+  if(!username){toast('Please select a user','error');return;}
+
+  const found=DB.users.find(u=>u.username===username);
+  if(!found){toast('User not found','error');return;}
+
+  i.assignedTo=username;i.assignedAt=new Date().toISOString();
+  incidentLog(i,'Assigned','Assigned to '+found.name||username);
+  saveDB();closeBatchModal();renderIncidents();toast('Incident assigned to '+found.name||username,'success');
 }
 
 function investigateIncidentPrompt(id){
@@ -1193,23 +1279,23 @@ function chequeTimelineCard(c){
     {d:c.actionDate?fd(c.actionDate):(c.updatedAt?fd(c.updatedAt):'—'),l:actionLabel,n:c.jobType==='rejected'?(c.rejectReason||''):(c.notes||'')},
     {d:c.verifiedAt?fd(c.verifiedAt):'—',l:'✅ Verified',n:c.verifiedBy?('by '+c.verifiedBy):''}
   ];
-  const tl=items.map(x=>`
-    <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+  const tl=items.map(x=>`\
+    <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;overflow:hidden">
       <span style="white-space:nowrap;color:var(--text-muted);min-width:110px">${x.d}</span>
-      <span style="color:var(--text);font-weight:600;min-width:170px">${x.l}</span>
-      <span style="color:var(--text-muted);flex:1">${esc(x.n||'')}</span>
+      <span style="color:var(--text);font-weight:600;min-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.l}</span>
+      <span style="color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.n||'')}</span>
     </div>`).join('');
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <strong>${esc(c.chequeNo||c.tran||'—')}</strong>
-      <span style="font-size:11px;color:var(--text-muted)">${esc(c.terminal)} · ${esc(customer)}</span>
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;overflow:hidden">
+      <strong style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.chequeNo||c.tran||'—')}</strong>
+      <span style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.terminal)} · ${esc(customer)}</span>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
       <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:var(--text-muted)">${fc(c.amount)}</span>
       <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:${statusColor};font-weight:600">${(c.status||'pending').replace(/_/g,' ')}</span>
       <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:var(--text-muted)">${closed?'✔️ Flow closed':'⏳ Pending'}</span>
     </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px">${tl}</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;overflow:hidden">${tl}</div>
   </div>`;
 }
 
@@ -1394,7 +1480,7 @@ function addUser(){
     location:document.getElementById('nuLoc')?.value||'',
     roles,createdAt:new Date().toISOString()
   });
-  saveDB();closeBatchModal();renderUsers();toast(`User "${username}" created`,'success');
+  saveDB();closeBatchModal();renderUsers();renderDashboard();toast(`User "${username}" created`,'success');
 }
 
 function editUser(id){
